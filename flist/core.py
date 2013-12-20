@@ -10,7 +10,7 @@ import weakref
 from urllib2 import urlopen
 from socket import socket, AF_INET, SOCK_STREAM
 from select import select
-import flist_api as api
+import api
 
 import logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
