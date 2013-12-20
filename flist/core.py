@@ -12,7 +12,8 @@ from socket import socket, AF_INET, SOCK_STREAM
 from select import select
 import api
 
-import logging
+import logging as log
+logging = log.getLogger("flist.core")
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 DEBUG = False
