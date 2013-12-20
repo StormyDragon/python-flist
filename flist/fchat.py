@@ -7,8 +7,6 @@ from urllib2 import urlopen
 from select import select
 logger = logging.getLogger("flist")
 
-DEBUG = False
-
 class Websocket(object):
     def __init__(self, server, port, account, character, ticket, **kwargs):
         self.account = unicode(account)
@@ -247,7 +245,7 @@ class Connection():
     def __init__(self, character, **kwargs):
         self.character = character
         server = kwargs.get("server", "chat.f-list.net")
-        port = 8722 if DEBUG else 9722
+        port = 8722 if kwargs.get("dev_chat", False) else 9722
         port = kwargs.get("port", port)
 
         self.channels = {}
