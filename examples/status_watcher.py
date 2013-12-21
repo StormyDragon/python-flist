@@ -1,7 +1,6 @@
 import logging
 from twisted.internet import reactor
-
-from flist.core import FList_Account
+import flist
 
 def log_status(data):
     logging.debug("{character} is {status}: {statusmsg}".format(**data))
@@ -10,10 +9,10 @@ def on_disconnect():
     reactor.callLater(60, connect)
 
 def connect():
-    account = FList_Account('account', 'password')
+    account = flist.Account('account', 'password')
     char = account.characters['character']
-    chat = char.start_chat()
-    chat.websocket.add_op_callback('STA', log_status)
+    chat = char.start_chat(dev_chat=True)
+    chat.websocket.add_op_callback(flist.fchat.STATUS, log_status)
     return chat
 
 if __name__ == '__main__':
