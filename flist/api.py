@@ -1,241 +1,157 @@
 import json
+from functools import wraps
 from urllib import urlencode
 from urllib2 import Request, urlopen
 
 import logging
 
-"""
-    F-List API interface.
-"""
-
 def get_ticket(account, password):
-    # Hrm.. getApiTicket returns a lot of information, rather than just a ticket.
-    # Ticket.
-    # Characters, including the default.
-    # Bookmarks.
-    # Friend connections.
-    data = {}
-    data['account'] = account
-    data['password'] = password
+    """You'll receive a ticket and a ton of other things that you probably won't need unless you're
+    making an f-chat client. Tickets are valid for 24 hours from issue, and invalidate all previous
+    tickets for the account when issued."""
+    data = {
+        'account': account,
+        'password': password,
+    }
     r = Request("http://www.f-list.net/json/getApiTicket.php", urlencode(data))
     val = urlopen(r)
     ppp = val.read()
     d = json.loads(ppp)
     return d
 
-def add_bookmark(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/bookmark-add.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+# API definitions
+flist_api_url = "http://www.f-list.net/json/api/{function}.php"
 
-def remove_bookmark(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/bookmark-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+def flist_api_decorator(func):
+    api_variables = func.func_code.co_varnames
+    api_name = func.__name__
 
-def list_bookmarks():
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/bookmark-remove.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+    @wraps(func)
+    def wrapper(**kwargs):
+        data = {}
+        for argument in api_variables:
+            data[argument] = kwargs.get(argument)
+        r = Request(flist_api_url.format(function=api_name.replace('_', '-')), urlencode(data))
+        val = urlopen(r)
+        ppp = val.read()
+        d = json.loads(ppp)
+        return d
 
-########################################
+    return wrapper
 
-def get_custom_kinks(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/character-customkinks.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+# ======================================== Bookmarks
+@flist_api_decorator
+def bookmark_add(account, ticket, name):
+    """Bookmark a profile. Takes one argument, "name"."""
+    pass
 
-def get_character(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/character-get.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def bookmark_list(account, ticket):
+    """List all bookmarked profiles."""
+    pass
 
-def get_character_images(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/character-images.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def bookmark_remove(account, ticket, name):
+    """Remove a profile bookmark. Takes one argument, "name"."""
+    pass
 
-def get_character_info(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/character-info.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+# ======================================== Character Data
+@flist_api_decorator
+def character_customkinks(account, ticket, name):
+    """Get a character's custom kinks. Requires one parameter, "name"."""
+    pass
 
-def get_character_kinks(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/character-kinks.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def character_get(name):
+    """Get basic characer info. Does not require the account and ticket form fields.
+    Requires one parameter, "name"."""
+    pass
 
-def get_character_list(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/character-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def character_images(account, ticket, name):
+    """Get a list of all character image urls, and some extra info like the dimensions.
+    Requires one parameter, "name"."""
+    pass
 
-########################################
+@flist_api_decorator
+def character_info(account, ticket, name):
+    """Get a character's profile info fields. Requires one parameter, "name"."""
+    pass
 
+@flist_api_decorator
+def character_kinks(account, ticket):
+    """Get a character's kinks. Requires one parameter, "name"."""
+    pass
 
-def list_group():
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/group-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def character_list(account, ticket):
+    """Get a list of all the account's characters."""
+    pass
 
-def list_ignore():
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/ignore-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+# ======================================== Miscellaneous Data
+@flist_api_decorator
+def group_list(account, ticket):
+    """Get the global list of all f-list groups."""
+    pass
 
-def list_profile_fields(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/info-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def ignore_list(account, ticket):
+    """Get a list of all profiles your account has on chat-ignore."""
+    pass
 
-def list_kinks(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/kink-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def info_list():
+    """Get the global list of profile info fields, grouped. Dropdown options include a list of the options.
+    Does not require the account and ticket form fields."""
+    pass
 
-#########################################
+@flist_api_decorator
+def kink_list(account, ticket):
+    """Get the global list of kinks, grouped. Does not require the account and ticket form fields."""
+    pass
 
-def list_friends():
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/friend-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+# ======================================== Friend list data, Friend requests
+@flist_api_decorator
+def friend_list(account, ticket):
+    """List all friends, account-wide, in a "your-character (dest) => the character's friend (source)" format."""
+    pass
 
-def friend_remove(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/friend-remove.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def friend_remove(account, ticket):
+    """Remove a profile from your friends. Takes two argument, "source_name" (your char)
+    and "dest_name" (the character's friend you're removing)."""
+    pass
 
-def request_accept(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/request-accept.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def request_accept(account, ticket):
+    """Accept an incoming friend request. Takes one argument, "request_id", which you
+    can get with the request-list endpoint."""
+    pass
 
-def request_cancel(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("http://www.f-list.net/json/api/request-cancel.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def request_cancel(account, ticket):
+    """Cancel an outgoing friend request. Takes one argument, "request_id", which you can
+    get with the request-pending endpoint."""
+    pass
 
-def request_deny(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("https://www.f-list.net/json/api/request-deny.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def request_deny(account, ticket):
+    """Deny a friend request. Takes one argument, "request_id", which you can get with the request-list endpoint."""
+    pass
 
-def request_list(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("https://www.f-list.net/json/api/request-list.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def request_list(account, ticket):
+    """Get all incoming friend requests."""
+    pass
 
-def request_pending(name):
-    data = {}
-    data['account'] = account
-    data['ticket'] = ticket
-    r = Request("https://www.f-list.net/json/api/request-pending.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def request_pending(account, ticket):
+    """Get all outgoing friend requests."""
+    pass
 
-def request_send(character, other_character):
-    data = {}
-    data['source_name'] = character
-    data['dest_name'] = other_character
-    r = Request("https://www.f-list.net/json/api/request-send.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+@flist_api_decorator
+def request_send(account, ticket):
+    """Send a friend request. source_name, dest_name."""
+    pass
+
+del flist_api_decorator, flist_api_url
