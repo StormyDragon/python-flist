@@ -1,72 +1,11 @@
 import json
 import logging
-from twisted.internet import reactor, task
+import opcode
+from twisted.internet import task
 from autobahn.websocket import WebSocketClientProtocol, WebSocketClientFactory, connectWS
-from socket import socket, AF_INET, SOCK_STREAM
-from urllib2 import urlopen
-from select import select
 
 logger = logging.getLogger(__name__)
 
-ACCOUNT_BAN = "ACB"
-ACCOUNT_UNBAN = "UBN"
-ACCOUNT_TIMEOUT = "TMO"
-SERVER_KICK = "KIK"
-LIST_CHATOPS = "ADL"
-PROMOTE_CHATOP = "AOP"
-DEMOTE_CHATOP = "DOP"
-LIST_ALTS = "AWC"
-BROADCAST = "BRO"
-CHANNEL_DESCRIPTION_CHANGED = "CDS"
-LIST_OFFICAL_CHANNELS = "CHA"
-BANLIST = "CBL"
-BAN = "CBU"
-UNBAN = "CUB"
-TIMEOUT = "CTU"
-CREATE_PRIVATE_CHANNEL = "CCR"
-CREATE_OFFICAL_CHANNEL = "CRC"
-CHANGE_CHANNEL_DESCRIPTION = "CDS"
-INVITE = "CIU"
-KICK = "CKU"
-PROMOTE_CHANOP = "COA"
-LIST_CHANOPS = "COL"
-NUMBER_OF_CONNECTED_USERS = "CON"
-DEMOTE_CHANOP = "COR"
-SET_CHANNEL_OWNER = "CSO"
-DEMOTE_CHANOP = "DOP"
-ERROR = "ERR"
-SEARCH = "FKS"
-GONE_OFFLINE = "FLN"
-SERVER_HELLO = "HLO"
-INITIAL_CHANNEL_DATA = "ICH"
-IDENTIFY = "IDN"
-JOIN_CHANNEL = "JCH"
-KINKS_DATA = "KID"
-KINKS = "KIN"
-PROFILE = "PRO"
-RELOAD_SERVER_CONFIG = "RLD"
-LEAVE_CHANNEL = "LCH"
-LIST_CHARACTERS = "LIS"
-USER_CONNECTED = "NLN"
-IGNORE = "IGN"
-FRIENDS_LIST = "FRL"
-LIST_PRIVATE_CHANNELS = "ORS"
-PING = "PIN"
-PROFILE_DATA = "PRD"
-PRIVATE_MESSAGE = "PRI"
-CHANNEL_MESSAGE = "MSG"
-ROLEPLAY_AD = "LRP"
-ROLL = "RLL"
-SET_CHANNEL_MODE = "RMO"
-SET_PRIVATE_CHANNEL_STATE = "RST"
-REWARD = "RWD"
-REPORT = "SFC"
-REAL_TIME_BRIDGE = "RTB"
-STATUS = "STA"
-SYSTEM_MESSAGE = "SYS"
-TYPING = "TPN"
-UPTIME = "UPT"
-VARIABLES = "VAR"
 
 class Websocket(object):
     def __init__(self, server, port, account, character, ticket, **kwargs):
@@ -88,7 +27,7 @@ class Websocket(object):
                 logger.debug("Ready to introduce ourselves.!")
                 self.client = cl_self
                 self._introduce()
-                self.pinger = task.LoopingCall(lambda: cl_self.sendMessage(PING))
+                self.pinger = task.LoopingCall(lambda: cl_self.sendMessage(opcode.PING))
                 self.pinger.start(45, False)
                 self.on_open()
 
@@ -116,8 +55,8 @@ class Websocket(object):
             connectWS(self.factory)
 
     def on_message(self, client, message):
-        if message == PING:
-          client.sendMessage(PING) # Pings are trivial, we don't care.
+        if message == opcode.PING:
+          client.sendMessage(opcode.PING) # Pings are trivial, we don't care.
           return
 
         callbacks = self.callbacks.get(message[:3], [])
@@ -136,7 +75,7 @@ class Websocket(object):
         data['character'] = self.character
         data['cname'] = "StormyDragons F-List Python client (stormweyr.dk)"
         data['cversion'] = "pre-alpha"
-        self.message(IDENTIFY, data)
+        self.message(opcode.IDENTIFY, data)
 
     def read(self):
         outval = self.cache[:]
@@ -237,7 +176,7 @@ class Character():
         d = {}
         d['character'] = self.name
         d['status'] = status
-        self.websocket.message(TYPING, d)
+        self.websocket.message(opcode.TYPING, d)
 
 
 class Channel():
@@ -248,7 +187,7 @@ class Channel():
         self.mode = mode
         self.title = title or name
         
-        self.websocket.add_op_callback(MESSAGE, self._channel_message)
+        self.websocket.add_op_callback(opcode.CHANNEL_MESSAGE, self._channel_message)
 
         self.callbacks = []
 
@@ -294,17 +233,17 @@ class Channel():
 
     def part(self):
         d = {'channel': self.name}
-        self.websocket.message(LEAVE_CHANNEL, d)
+        self.websocket.message(opcode.LEAVE_CHANNEL, d)
         pass # LCH { channel: "channel" }
 
     def join(self):
         d = {'channel': self.name}
-        self.websocket.message(JOIN_CHANNEL, d)
+        self.websocket.message(opcode.JOIN_CHANNEL, d)
         pass # JCH { channel: "channel" }     JCH {"character": {"identity": "Hexxy"}, "channel": "Frontpage"}
 
     def send(self, message):
         d = {'channel': self.name, 'message': message}
-        self.websocket.message(MESSAGE, d)
+        self.websocket.message(opcode.CHANNEL_MESSAGE, d)
         pass # MSG { channel: "channel", message: "message" } MSG {"message": "Right, evenin'", "character": "Aensland Morrigan", "channel": "Frontpage"}
 
     def advertise_channel(self):
@@ -330,9 +269,9 @@ class Connection():
 
         self.websocket = Websocket(server, port, character.account, character, character.account.get_ticket(), **kwargs)
         self.websocket.connect()
-        self.websocket.add_op_callback(LIST_OFFICAL_CHANNELS, self._update_public_channels)
-        self.websocket.add_op_callback(LIST_PRIVATE_CHANNELS, self._update_private_channels)
-        self.websocket.add_op_callback(VARIABLES, self._variables)
+        self.websocket.add_op_callback(opcode.LIST_OFFICAL_CHANNELS, self._update_public_channels)
+        self.websocket.add_op_callback(opcode.LIST_PRIVATE_CHANNELS, self._update_private_channels)
+        self.websocket.add_op_callback(opcode.VARIABLES, self._variables)
     
     def quit(self):
         del self.websocket
@@ -365,34 +304,34 @@ class Connection():
         self._update_channels(self.private_channels, channel_list)
 
     def broadcast(self, message):
-        self.websocket.message(BROADCAST, {'message':message})
+        self.websocket.message(opcode.BROADCAST, {'message':message})
 
     def create_channel(self, channelname):
-        self.websocket.message(CREATE_PRIVATE_CHANNEL, {'channel':channelname})
+        self.websocket.message(opcode.CREATE_PRIVATE_CHANNEL, {'channel':channelname})
         pass # CCR { channel: "channel"
 
     def update_global_channels(self):
-        self.websocket.message(LIST_OFFICAL_CHANNELS)
+        self.websocket.message(opcode.LIST_OFFICAL_CHANNELS)
         pass # CHA
 
     def create_global_channel(self, channelname):
-        self.websocket.message(CREATE_OFFICAL_CHANNEL, {'channel':channelname})
+        self.websocket.message(opcode.CREATE_OFFICAL_CHANNEL, {'channel':channelname})
         pass # CRC { channel: "channel" }
 
     def search_kinks(self, kink, genders):
-        self.websocket.message(SEARCH, {'kink':kink, 'genders': list(genders)})
+        self.websocket.message(opcode.SEARCH, {'kink':kink, 'genders': list(genders)})
         pass # FKS { kink: "kinkid", genders: [array] }    FKS {"kink":"523","genders":["Male","Female","Transgender","Herm","Shemale","Male-Herm","Cunt-boy","None"]}
 
     def ignore_list(self):
-        self.websocket.message(IGNORE, {'action':'list'})
+        self.websocket.message(opcode.IGNORE, {'action':'list'})
         pass # IGN { action: "list" }
 
     def list_ops(self):
-        self.websocket.message(LIST_CHATOPS)
+        self.websocket.message(opcode.LIST_CHATOPS)
         pass # OPP
 
     def update_private_channels(self):
-        self.websocket.message(LIST_PRIVATE_CHANNELS)
+        self.websocket.message(opcode.LIST_PRIVATE_CHANNELS)
         pass # ORS
 
     def status(self, status, message):
@@ -400,7 +339,7 @@ class Connection():
         d['character'] = unicode(self.character)
         d['status'] = unicode(status)
         d['statusmsg'] = unicode(message)
-        self.websocket.message(STATUS, d)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
+        self.websocket.message(opcode.STATUS, d)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
 
     def uptime(self):
-        self.websocket.message(UPTIME)
+        self.websocket.message(opcode.UPTIME)
