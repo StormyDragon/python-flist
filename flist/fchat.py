@@ -5,7 +5,8 @@ from autobahn.websocket import WebSocketClientProtocol, WebSocketClientFactory, 
 from socket import socket, AF_INET, SOCK_STREAM
 from urllib2 import urlopen
 from select import select
-logger = logging.getLogger("flist")
+
+logger = logging.getLogger(__name__)
 
 ACCOUNT_BAN = "ACB"
 ACCOUNT_UNBAN = "UBN"
@@ -83,7 +84,7 @@ class Websocket(object):
 
         class WebsocketClient(WebSocketClientProtocol):
             def onOpen(cl_self):
-                logging.debug("Ready to introduce ourselves.!")
+                logger.debug("Ready to introduce ourselves.!")
                 self.client = cl_self
                 self._introduce()
                 self.PIN = task.LoopingCall(lambda: cl_self.sendMessage(PING))
@@ -91,7 +92,7 @@ class Websocket(object):
                 self.on_open()
 
             def connectionLost(cl_self, reason):
-                logging.debug("Connection closed with reason {reason}".format(reason=reason))
+                logger.debug("Connection closed with reason {reason}".format(reason=reason))
                 self.client = None
                 if self.PIN:
                     self.PIN.stop()
@@ -110,7 +111,7 @@ class Websocket(object):
 
     def connect(self):
         if not self.client:
-            logging.debug("Websocket connecting.")
+            logger.debug("Websocket connecting.")
             connectWS(self.factory)
 
     def on_message(self, client, message):
@@ -124,7 +125,7 @@ class Websocket(object):
 
         for h in self.handlers:
             h(message[:3], message[4:])
-        logging.debug("<-- %s" % (message,))
+        logger.debug("<-- %s" % (message,))
 
     def _introduce( self ):
         data = {}
@@ -143,10 +144,10 @@ class Websocket(object):
 
     def write(self, message):
         if self.client:
-            logging.debug("--> %s" % (message,))
+            logger.debug("--> %s" % (message,))
             self.client.sendMessage(message)
         else:
-            logging.debug("Attempt to write message to Missing client.")
+            logger.debug("Attempt to write message to Missing client.")
 
     def message(self, op, di=None):
         if di:
@@ -248,7 +249,7 @@ class Channel():
 
     def _channel_message(self, message):
         if message['channel'] is self.name:
-            logging.info("%s - %s: %s" % (message['channel'], message['character'], message['message']))
+            logger.info("%s - %s: %s" % (message['channel'], message['character'], message['message']))
 
     def banlist(self):
         pass # CBL { channel: "channel" }
@@ -337,7 +338,7 @@ class Connection():
                     c = Channel(self, chan['name'], chan['mode'])
                     self.channels[chan['name']] = c
         else:
-            logging.error("Channel response without any channels.")
+            logger.error("Channel response without any channels.")
 
     def broadcast(self, message):
         self.websocket.message(BROADCAST, {'message':message})
