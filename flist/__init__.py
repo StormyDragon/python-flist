@@ -2,4 +2,4 @@
 import fchat
 
 # The starting object for the whole thing is the concept of an Account
-from core import Account
+from account import Account
