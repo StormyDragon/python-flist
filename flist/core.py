@@ -18,8 +18,10 @@ logging = log.getLogger("flist.core")
 
 DEBUG = False
 
+
 class AccountMissingException(Exception):
     pass
+
 
 class FList_Character():
     def __init__(self, charactername, account):
@@ -62,6 +64,7 @@ class FList_Account():
 
     def __unicode__(self):
         return self.account
+
 #
 class FList_Websocket(object):
     def __init__(self, server, port, account, character, ticket, **kwargs):
@@ -76,28 +79,29 @@ class FList_Websocket(object):
         self.callbacks = {}
         self.handlers = []
         self.client = None
+        self.pinger = None
         
         class FList_Websocket_Client(WebSocketClientProtocol):
             def onOpen(cl_self):
                 logging.debug("Ready to introduce ourselves.!")
                 self.client = cl_self
                 self._introduce()
-                self.PIN = task.LoopingCall(lambda: cl_self.sendMessage("PIN"))
-                self.PIN.start(45, False)
+                self.pinger = task.LoopingCall(lambda: cl_self.sendMessage("PIN"))
+                self.pinger.start(45, False)
                 self.on_open()
             
             def connectionLost(cl_self, reason):
                 logging.debug("Connection closed with reason {reason}".format(reason=reason))
                 self.client = None
-                if self.PIN:
-                    self.PIN.stop()
+                if self.pinger:
+                    self.pinger.stop()
                 self.on_close()
                 WebSocketClientProtocol.connectionLost(cl_self, reason)
             
             def onMessage(cl_self, message, binary):
-                if self.PIN:
-                    self.PIN.stop()
-                    self.PIN.start(45, False)
+                if self.pinger:
+                    self.pinger.stop()
+                    self.pinger.start(45, False)
                 self.on_message(cl_self, message)
         
         factory = WebSocketClientFactory("ws://{server}:{port}".format(server=server, port=port), debug=False)
@@ -177,7 +181,7 @@ class Character():
         self.websocket = chat.websocket
     
     def __unicode__(self):
-        return name
+        return self.name
     
     def account_ban(self):
         pass # ACB { character: "character" }
@@ -230,21 +234,34 @@ class Character():
     def announce_typing(self, status): # clear, paused, typing
         d = {}
         d['character'] = self.name
-        d['status'] = self.status
+        d['status'] = status
         self.websocket.message("TPN", d)
 
+
 class Channel():
-    def __init__(self, chat, name, mode):
+    def __init__(self, chat, name, mode=None, title=None):
         """Channels are initiated as they become known."""
         self.websocket = chat.websocket
         self.name = name
         self.mode = mode
+        self.title = title or name
         
         self.websocket.add_op_callback('MSG', self._channel_message)
-    
+
+        self.callbacks = []
+
+    def add_listener(self, callback):
+        """Add a listener; accepts f(character, message)"""
+        self.callbacks.append(callback)
+
+    def remove_listener(self, callback):
+        self.callbacks.remove(callback)
+
     def _channel_message(self, message):
         if message['channel'] is self.name:
-            logging.info("%s - %s: %s" % (message['channel'], message['character'], message['message']))
+            for f in self.callbacks:
+                message.pop('channel')
+                f(**message)
     
     def banlist(self):
         pass # CBL { channel: "channel" }
@@ -297,6 +314,7 @@ class Channel():
     def set_status(self, status):
         pass # RST { channel: "channel", status: "status" } ("private", "public")
 
+
 class FChat():
     def __init__(self, character, **kwargs):
         self.character = character
@@ -304,37 +322,48 @@ class FChat():
         port = 8722 if DEBUG else 9722
         port = kwargs.get("port", port)
         
-        self.channels = {}
+        self.public_channels = {}
+        self.private_channels = {}
         self.characters = {}
         self.variables = {}
         
         self.websocket = FList_Websocket(server, port, character.account, character, character.account.get_ticket(), **kwargs)
         self.websocket.connect()
         
-        self.websocket.add_op_callback('CHA', self._update_channels)
+        self.websocket.add_op_callback('CHA', self._update_public_channels)
+        self.websocket.add_op_callback('ORS', self._update_private_channels)
         self.websocket.add_op_callback('VAR', self._variables)
     
     def quit(self):
         del self.websocket
-        del self.channels
+        del self.public_channels
+        del self.private_channels
         del self.variables
         del self.characters
         del self.character
     
     def _variables(self, var):
         self.variables[var['variable']] = var['value']
-    
-    def _update_channels(self, channel_list):
-        # {"channels":[{"name":"Dragons","mode":"both","characters":0},{"name":"Frontpage","mode":"both","characters":0}, ... }
+
+    def _update_channels(self, update_list, channel_list):
+        # {"channels":[{"name":"Dragons","mode":"both","characters":0},{"name":"Frontpage","mode":"both","characters":0}, ... ]}
+        # {"channels":[{"name":"ADH-********", "title": "Fuckit", "characters": 0}, ...]}
         channels = channel_list.get('channels', [])
         if channels:
             for chan in channels:
-                if chan['name'] not in self.channels:
-                    c = Channel(self, chan['name'], chan['mode'])
-                    self.channels[chan['name']] = c
+                if chan['name'] not in update_list:
+                    chan.pop('characters')
+                    c = Channel(self, **chan)
+                    update_list[chan['name']] = c
         else:
             logging.error("Channel response without any channels.")
-    
+
+    def _update_public_channels(self, channel_list):
+        self._update_channels(self.public_channels, channel_list)
+
+    def _update_private_channels(self, channel_list):
+        self._update_channels(self.private_channels, channel_list)
+
     def broadcast(self, message):
         self.websocket.message("BRO", {'message':message})
     
@@ -365,38 +394,13 @@ class FChat():
     def update_private_channels(self):
         self.websocket.message("ORS")
         pass # ORS
-    
-    def online(self, message):
+
+    def status(self, status, message):
         d = {}
         d['character'] = unicode(self.character)
-        d['status'] = "online"
+        d['status'] = unicode(status)
         d['statusmsg'] = unicode(message)
-        self.websocket.message("STA", d)
-        pass # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
-    
-    def looking(self, message):
-        d = {}
-        d['character'] = unicode(self.character)
-        d['status'] = "looking"
-        d['statusmsg'] = unicode(message)
-        self.websocket.message("STA", d)
-        pass # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
-    
-    def busy(self, message):
-        d = {}
-        d['character'] = unicode(self.character)
-        d['status'] = "busy"
-        d['statusmsg'] = unicode(message)
-        self.websocket.message("STA", d)
-        pass # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
-    
-    def dnd(self, message):
-        d = {}
-        d['character'] = unicode(self.character)
-        d['status'] = "dnd"
-        d['statusmsg'] = unicode(message)
-        self.websocket.message("STA", d)
-        pass # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
+        self.websocket.message("STA", d)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
 
     def uptime(self):
         self.websocket.message("UPT")
