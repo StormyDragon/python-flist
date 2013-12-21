@@ -29,7 +29,7 @@ def flist_api_decorator(func):
 
     @wraps(func)
     def wrapper(**kwargs):
-        logger.info("F-List API call: {method}{arguments}".format(method=api_name, kwargs))
+        logger.info("F-List API call: {method}{arguments}".format(method=api_name, arguments=kwargs))
         data = {}
         for argument in api_variables:
             data[argument] = kwargs.get(argument)
