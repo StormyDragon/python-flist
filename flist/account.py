@@ -47,24 +47,3 @@ class Account():
 
     def __unicode__(self):
         return self.account
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
