@@ -4,6 +4,7 @@ from urllib import urlencode
 from urllib2 import Request, urlopen
 
 import logging
+logger = logging.getLogger(__name__)
 
 def get_ticket(account, password):
     """You'll receive a ticket and a ton of other things that you probably won't need unless you're
@@ -28,6 +29,7 @@ def flist_api_decorator(func):
 
     @wraps(func)
     def wrapper(**kwargs):
+        logger.info("F-List API call: {method}{arguments}".format(method=api_name, kwargs))
         data = {}
         for argument in api_variables:
             data[argument] = kwargs.get(argument)
