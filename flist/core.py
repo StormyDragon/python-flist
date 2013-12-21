@@ -8,7 +8,7 @@ logger = logging.getLogger("flist")
 class AccountMissingException(Exception):
     pass
 
-class FList_Character():
+class Character():
     def __init__(self, charactername, account):
         self.charname = charactername
         self._account = weakref.ref(account)
@@ -27,7 +27,7 @@ class FList_Character():
         return self.charname
 
 
-class FList_Account():
+class Account():
     def __init__(self, accountname, password):
         self.characters = {}
         self.account = accountname
@@ -39,7 +39,7 @@ class FList_Account():
         self.friends = data['friends']
         self.ticket = data['ticket']
         for charname in data['characters']:
-            c = FList_Character(charname, self)
+            c = Character(charname, self)
             self.characters.setdefault(charname, c) # Update the character.
 
     def get_ticket(self):
