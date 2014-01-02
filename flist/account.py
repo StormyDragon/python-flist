@@ -20,9 +20,6 @@ class Character():
             raise AccountMissingException("This character has no account associated to it.")
         return val
 
-    def start_chat(self, **kwargs):
-        return fchat.Connection(self, **kwargs)
-
     def __unicode__(self):
         return self.charname
 

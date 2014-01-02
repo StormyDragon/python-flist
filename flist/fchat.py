@@ -258,10 +258,8 @@ class Channel():
 class Connection():
     def __init__(self, character, **kwargs):
         self.character = character
-        server = kwargs.get("server", "chat.f-list.net")
-        port = 8722 if kwargs.get("dev_chat", False) else 9722
-        port = kwargs.get("port", port)
-    
+        server = kwargs.get("server")
+        port = kwargs.get("port")
         self.public_channels = {}
         self.private_channels = {}
         self.characters = {}
