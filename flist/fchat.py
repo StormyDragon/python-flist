@@ -8,19 +8,20 @@ logger = logging.getLogger(__name__)
 
 
 class Websocket(object):
-    def __init__(self, server, port, account, character, ticket, **kwargs):
+    def __init__(self, server, port, account, character, ticket):
         self.account = unicode(account)
         self.character = unicode(character)
         self.ticket = unicode(ticket)
 
-        self.caching = kwargs.get('caching', True)
-        self.on_close = kwargs.get('connection_lost', lambda: None)
-        self.on_open = kwargs.get('connection_open', lambda: None)
+        self.on_close = lambda: None
+        self.on_open = lambda: None
 
         self.callbacks = {}
         self.handlers = []
         self.client = None
         self.pinger = None
+
+        self.add_op_callback(opcode.PING, self.ping_handler)
 
         class WebsocketClient(WebSocketClientProtocol):
             def onOpen(cl_self):
@@ -49,60 +50,67 @@ class Websocket(object):
         factory.protocol = WebsocketClient
         self.factory = factory
 
+    def ping_handler(self, message):
+        self.message(opcode.PING)
+
     def connect(self):
         if not self.client:
             logger.debug("Websocket connecting.")
             connectWS(self.factory)
 
-    def on_message(self, client, message):
-        if message == opcode.PING:
-          client.sendMessage(opcode.PING) # Pings are trivial, we don't care.
-          return
+    @staticmethod
+    def _load_json(message):
+        try:
+            j = json.loads(message[4:])
+        except ValueError:
+            j = {}
+        return j
 
-        callbacks = self.callbacks.get(message[:3], [])
+    def on_message(self, client, message):
+        op = message[:3]
+        callbacks = self.callbacks.get(op, [])
+        j = self._load_json(message)
+
         for f in callbacks:
-            f(json.loads(message[4:]))
+            f(j)
 
         for h in self.handlers:
-            h(message[:3], message[4:])
-        logger.debug("<-- %s" % (message,))
+            h(op, j)
+        logger.getChild(op).debug("<-- %s" % (message,))
 
     def _introduce( self ):
-        data = {}
-        data['method'] = 'ticket'
-        data['ticket'] = self.ticket
-        data['account'] = self.account
-        data['character'] = self.character
-        data['cname'] = "StormyDragons F-List Python client (stormweyr.dk)"
-        data['cversion'] = "pre-alpha"
+        data = {
+            'method': 'ticket',
+            'ticket': self.ticket,
+            'account': self.account,
+            'character': self.character,
+            'cname': "StormyDragons F-List Python client (stormweyr.dk)",
+            'cversion': "pre-alpha",
+        }
         self.message(opcode.IDENTIFY, data)
 
-    def read(self):
-        outval = self.cache[:]
-        self.cache = []
-        return outval
-
-    def write(self, message):
+    def _write(self, message):
         if self.client:
-            logger.debug("--> %s" % (message,))
+            logger.getChild(message[:3]).debug("--> %s" % (message,))
             self.client.sendMessage(message)
         else:
             logger.debug("Attempt to write message to Missing client.")
 
     def message(self, op, di=None):
         if di:
-            self.write("%s %s" % (op, json.dumps(di)))
+            self._write("%s %s" % (op, json.dumps(di)))
         else:
-            self.write(op)
+            self._write(op)
 
     def add_op_callback(self, op, callback):
-        cbs = self.callbacks.setdefault(op, [])
-        cbs.append(callback)
+        """Callbacks take the form of f(message)"""
+        self.callbacks.setdefault(op, []).append(callback)
 
     def remove_op_callback(self, op, callback):
         self.callbacks.setdefault(op, []).remove(callback)
 
     def add_message_handler(self, handler):
+        """A message handler takes the form of f(opcode, message)"""
         self.handlers.append(handler)
 
     def remove_message_handler(self, handler):
@@ -256,16 +264,14 @@ class Channel():
         pass # RST { channel: "channel", status: "status" } ("private", "public")
 
 class Connection():
-    def __init__(self, character, **kwargs):
+    def __init__(self, character, server, port):
         self.character = character
-        server = kwargs.get("server")
-        port = kwargs.get("port")
         self.public_channels = {}
         self.private_channels = {}
         self.characters = {}
         self.variables = {}
 
-        self.websocket = Websocket(server, port, character.account, character, character.account.get_ticket(), **kwargs)
+        self.websocket = Websocket(server, port, character.account, character, character.account.get_ticket())
         self.websocket.connect()
         self.websocket.add_op_callback(opcode.LIST_OFFICAL_CHANNELS, self._update_public_channels)
         self.websocket.add_op_callback(opcode.LIST_PRIVATE_CHANNELS, self._update_private_channels)
@@ -325,7 +331,7 @@ class Connection():
         pass # IGN { action: "list" }
 
     def list_ops(self):
-        self.websocket.message(opcode.LIST_CHATOPS)
+        self.websocket.message(opcode.LIST_GLOBAL_OPS)
         pass # OPP
 
     def update_private_channels(self):
