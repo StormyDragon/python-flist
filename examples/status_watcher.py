@@ -1,6 +1,5 @@
 import logging
-import flist
-from flist import opcode
+from flist import account_login, opcode
 from twisted.internet import reactor
 
 def log_status(data):
@@ -10,7 +9,7 @@ def on_disconnect():
     reactor.callLater(60, connect)
 
 def connect():
-    account = flist.account_login('account', 'password')
+    account = account_login('account', 'password')
     char = account.characters['character']
     chat = char.start_chat(dev_chat=True)
     chat.websocket.add_op_callback(opcode.STATUS, log_status)
