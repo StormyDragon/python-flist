@@ -1,18 +1,23 @@
 import json
 import logging
 import opcode
-from twisted.internet import task
+from twisted.internet import task, defer
 from autobahn.websocket import WebSocketClientProtocol, WebSocketClientFactory, connectWS
 
 logger = logging.getLogger(__name__)
 
 
-class Websocket(object):
-    def __init__(self, server, port, account, character, ticket):
-        self.account = unicode(account)
-        self.character = unicode(character)
-        self.ticket = unicode(ticket)
+class WebsocketChatProtocol(object):
+    """Websocket protocol with included ping handler
+    connect method: return deferred when the protocol is established.
 
+    add_op_callback: accepts a method which receives a dict object corresponding to the decoded JSON data.
+    remove_op_callback
+
+    add_message_handler: accepts a method which receives the opcode and dict of the decoded JSON data.
+    remove_message_handler
+    """
+    def __init__(self, server, port):
         self.on_close = lambda: None
         self.on_open = lambda: None
 
@@ -21,19 +26,18 @@ class Websocket(object):
         self.client = None
         self.pinger = None
 
-        self.add_op_callback(opcode.PING, self.ping_handler)
+        self.add_op_callback(opcode.PING, self._ping_handler)
 
         class WebsocketClient(WebSocketClientProtocol):
             def onOpen(cl_self):
-                logger.debug("Ready to introduce ourselves.!")
+                logger.info("Websocket connected.")
                 self.client = cl_self
-                self._introduce()
                 self.pinger = task.LoopingCall(lambda: cl_self.sendMessage(opcode.PING))
                 self.pinger.start(45, False)
                 self.on_open()
 
             def connectionLost(cl_self, reason):
-                logger.debug("Connection closed with reason {reason}".format(reason=reason))
+                logger.info("Websocket connection closed with reason {explained}".format(explained=reason))
                 self.client = None
                 if self.pinger:
                     self.pinger.stop()
@@ -50,12 +54,11 @@ class Websocket(object):
         factory.protocol = WebsocketClient
         self.factory = factory
 
-    def ping_handler(self, message):
+    def _ping_handler(self, message):
         self.message(opcode.PING)
 
     def connect(self):
         if not self.client:
-            logger.debug("Websocket connecting.")
             connectWS(self.factory)
 
     @staticmethod
@@ -63,7 +66,7 @@ class Websocket(object):
         try:
             j = json.loads(message[4:])
         except ValueError:
-            j = {}
+            j = None
         return j
 
     def on_message(self, client, message):
@@ -76,25 +79,14 @@ class Websocket(object):
 
         for h in self.handlers:
             h(op, j)
-        logger.getChild(op).debug("<-- %s" % (message,))
-
-    def _introduce( self ):
-        data = {
-            'method': 'ticket',
-            'ticket': self.ticket,
-            'account': self.account,
-            'character': self.character,
-            'cname': "StormyDragons F-List Python client (stormweyr.dk)",
-            'cversion': "pre-alpha",
-        }
-        self.message(opcode.IDENTIFY, data)
+        logger.getChild(op).info("<-- %s" % (message,))
 
     def _write(self, message):
         if self.client:
-            logger.getChild(message[:3]).debug("--> %s" % (message,))
+            logger.getChild(message[:3]).info("--> %s" % (message,))
             self.client.sendMessage(message)
         else:
-            logger.debug("Attempt to write message to Missing client.")
+            logger.error("Attempt to write message to Missing client.")
 
     def message(self, op, di=None):
         if di:
@@ -264,21 +256,32 @@ class Channel():
         pass # RST { channel: "channel", status: "status" } ("private", "public")
 
 class Connection():
-    def __init__(self, character, server, port):
+    def __init__(self, protocol, character):
         self.character = character
         self.public_channels = {}
         self.private_channels = {}
         self.characters = {}
         self.variables = {}
 
-        self.websocket = Websocket(server, port, character.account, character, character.account.get_ticket())
-        self.websocket.connect()
-        self.websocket.add_op_callback(opcode.LIST_OFFICAL_CHANNELS, self._update_public_channels)
-        self.websocket.add_op_callback(opcode.LIST_PRIVATE_CHANNELS, self._update_private_channels)
-        self.websocket.add_op_callback(opcode.VARIABLES, self._variables)
-    
+        self.protocol = protocol
+        self.protocol.add_op_callback(opcode.LIST_OFFICAL_CHANNELS, self._update_public_channels)
+        self.protocol.add_op_callback(opcode.LIST_PRIVATE_CHANNELS, self._update_private_channels)
+        self.protocol.add_op_callback(opcode.VARIABLES, self._variables)
+
+    def connect(self):
+        deferrence = defer.Deferred()
+        o = self.protocol.on_open
+        def on_open():
+            o()
+            deferrence.callback(self)
+        self.protocol.on_open = on_open
+        self.protocol.connect()
+
+        deferrence.addCallback(self._introduce)
+        return deferrence
+
     def quit(self):
-        del self.websocket
+        del self.protocol
         del self.public_channels
         del self.private_channels
         del self.variables
@@ -301,6 +304,18 @@ class Connection():
         else:
             logger.error("Channel response without any channels.")
 
+    def _introduce(self, chat):
+        data = {
+            'method': 'ticket',
+            'ticket': self.character.account.get_ticket(),
+            'account': unicode(self.character.account),
+            'character': unicode(self.character),
+            'cname': "StormyDragons F-List Python client (stormweyr.dk)",
+            'cversion': "pre-alpha",
+        }
+        self.protocol.message(opcode.IDENTIFY, data)
+        return chat
+
     def _update_public_channels(self, channel_list):
         self._update_channels(self.public_channels, channel_list)
 
@@ -308,42 +323,43 @@ class Connection():
         self._update_channels(self.private_channels, channel_list)
 
     def broadcast(self, message):
-        self.websocket.message(opcode.BROADCAST, {'message':message})
+        self.protocol.message(opcode.BROADCAST, {'message':message})
 
     def create_channel(self, channelname):
-        self.websocket.message(opcode.CREATE_PRIVATE_CHANNEL, {'channel':channelname})
+        self.protocol.message(opcode.CREATE_PRIVATE_CHANNEL, {'channel':channelname})
         pass # CCR { channel: "channel"
 
     def update_global_channels(self):
-        self.websocket.message(opcode.LIST_OFFICAL_CHANNELS)
+        self.protocol.message(opcode.LIST_OFFICAL_CHANNELS)
         pass # CHA
 
     def create_global_channel(self, channelname):
-        self.websocket.message(opcode.CREATE_OFFICAL_CHANNEL, {'channel':channelname})
+        self.protocol.message(opcode.CREATE_OFFICAL_CHANNEL, {'channel':channelname})
         pass # CRC { channel: "channel" }
 
     def search_kinks(self, kink, genders):
-        self.websocket.message(opcode.SEARCH, {'kink':kink, 'genders': list(genders)})
+        self.protocol.message(opcode.SEARCH, {'kink':kink, 'genders': list(genders)})
         pass # FKS { kink: "kinkid", genders: [array] }    FKS {"kink":"523","genders":["Male","Female","Transgender","Herm","Shemale","Male-Herm","Cunt-boy","None"]}
 
     def ignore_list(self):
-        self.websocket.message(opcode.IGNORE, {'action':'list'})
+        self.protocol.message(opcode.IGNORE, {'action':'list'})
         pass # IGN { action: "list" }
 
     def list_ops(self):
-        self.websocket.message(opcode.LIST_GLOBAL_OPS)
+        self.protocol.message(opcode.LIST_GLOBAL_OPS)
         pass # OPP
 
     def update_private_channels(self):
-        self.websocket.message(opcode.LIST_PRIVATE_CHANNELS)
+        self.protocol.message(opcode.LIST_PRIVATE_CHANNELS)
         pass # ORS
 
     def status(self, status, message):
-        d = {}
-        d['character'] = unicode(self.character)
-        d['status'] = unicode(status)
-        d['statusmsg'] = unicode(message)
-        self.websocket.message(opcode.STATUS, d)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
+        packet = {
+            'character': unicode(self.character),
+            'status': unicode(status),
+            'statusmsg': unicode(message)
+        }
+        self.protocol.message(opcode.STATUS, packet)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
 
     def uptime(self):
-        self.websocket.message(opcode.UPTIME)
+        self.protocol.message(opcode.UPTIME)

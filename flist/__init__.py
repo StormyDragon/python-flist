@@ -12,7 +12,10 @@ def start_chat(character, server="chat.f-list.net", dev_chat=False):
     :param character: Character instance
     :param server: The server to which we connect.
     :param dev_chat: determines which chat we connect to.
+    :return deferred which fires with the chat instance once the connection has been established and introduction fired.
     """
-    from fchat import Connection
+    from fchat import Connection, WebsocketChatProtocol
     port = 8722 if dev_chat else 9722
-    return Connection(character, server=server, port=port)
+    protocol = WebsocketChatProtocol(server, port)
+    d = Connection(protocol, character).connect()
+    return d
