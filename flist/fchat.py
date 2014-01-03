@@ -180,14 +180,14 @@ class Character():
 
 
 class Channel():
-    def __init__(self, chat, name, mode=None, title=None):
+    def __init__(self, chat, channel, mode=None, title=None):
         """Channels are initiated as they become known."""
-        self.websocket = chat.websocket
-        self.name = name
+        self.protocol = chat.protocol
+        self.name = channel
         self.mode = mode
-        self.title = title or name
+        self.title = title or channel
         
-        self.websocket.add_op_callback(opcode.CHANNEL_MESSAGE, self._channel_message)
+        self.protocol.add_op_callback(opcode.CHANNEL_MESSAGE, self._channel_message)
 
         self.callbacks = []
 
@@ -199,10 +199,10 @@ class Channel():
         self.callbacks.remove(callback)
 
     def _channel_message(self, message):
-        if message['channel'] is self.name:
+        if message['channel'] == self.name:
             for f in self.callbacks:
                 message.pop('channel')
-                f(**message)
+                f(self, **message)
     
     def banlist(self):
         pass # CBL { channel: "channel" }
@@ -233,17 +233,17 @@ class Channel():
 
     def part(self):
         d = {'channel': self.name}
-        self.websocket.message(opcode.LEAVE_CHANNEL, d)
+        self.protocol.message(opcode.LEAVE_CHANNEL, d)
         pass # LCH { channel: "channel" }
 
     def join(self):
         d = {'channel': self.name}
-        self.websocket.message(opcode.JOIN_CHANNEL, d)
+        self.protocol.message(opcode.JOIN_CHANNEL, d)
         pass # JCH { channel: "channel" }     JCH {"character": {"identity": "Hexxy"}, "channel": "Frontpage"}
 
     def send(self, message):
         d = {'channel': self.name, 'message': message}
-        self.websocket.message(opcode.CHANNEL_MESSAGE, d)
+        self.protocol.message(opcode.CHANNEL_MESSAGE, d)
         pass # MSG { channel: "channel", message: "message" } MSG {"message": "Right, evenin'", "character": "Aensland Morrigan", "channel": "Frontpage"}
 
     def advertise_channel(self):
@@ -273,11 +273,16 @@ class Connection():
         o = self.protocol.on_open
         def on_open():
             o()
-            deferrence.callback(self)
-        self.protocol.on_open = on_open
-        self.protocol.connect()
+            self._introduce()
 
-        deferrence.addCallback(self._introduce)
+        def on_connected(data):
+            if data['identity'] == unicode(self.character):
+                self.protocol.remove_op_callback(opcode.USER_CONNECTED, on_connected)
+                deferrence.callback(self)
+
+        self.protocol.on_open = on_open
+        self.protocol.add_op_callback(opcode.USER_CONNECTED, on_connected)
+        self.protocol.connect()
         return deferrence
 
     def quit(self):
@@ -304,7 +309,7 @@ class Connection():
         else:
             logger.error("Channel response without any channels.")
 
-    def _introduce(self, chat):
+    def _introduce(self):
         data = {
             'method': 'ticket',
             'ticket': self.character.account.get_ticket(),
@@ -314,7 +319,6 @@ class Connection():
             'cversion': "pre-alpha",
         }
         self.protocol.message(opcode.IDENTIFY, data)
-        return chat
 
     def _update_public_channels(self, channel_list):
         self._update_channels(self.public_channels, channel_list)
@@ -328,6 +332,26 @@ class Connection():
     def create_channel(self, channelname):
         self.protocol.message(opcode.CREATE_PRIVATE_CHANNEL, {'channel':channelname})
         pass # CCR { channel: "channel"
+
+    def join(self, channelname):
+        d = defer.Deferred()
+
+        channel = self.public_channels.get(channelname, None)
+        if channel:
+            d.errback()
+            return
+
+        def on_join(channel_data):
+            if channel_data['channel'] == channelname:
+                self.protocol.remove_op_callback(opcode.JOIN_CHANNEL, on_join)
+                channel_data.pop('character')
+                channel = Channel(self, **channel_data)
+                self.public_channels[channelname] = channel
+                d.callback(channel)
+
+        self.protocol.add_op_callback(opcode.JOIN_CHANNEL, on_join)
+        self.protocol.message(opcode.JOIN_CHANNEL, {'channel':channelname})
+        return d
 
     def update_global_channels(self):
         self.protocol.message(opcode.LIST_OFFICAL_CHANNELS)
