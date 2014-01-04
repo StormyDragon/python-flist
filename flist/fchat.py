@@ -1,8 +1,8 @@
 import json
 import logging
-import opcode
-from twisted.internet import task, defer
-from autobahn.websocket import WebSocketClientProtocol, WebSocketClientFactory, connectWS
+import flist.opcode as opcode
+import asyncio
+from autobahn.asyncio.websocket import WebSocketClientProtocol, WebSocketClientFactory
 
 logger = logging.getLogger(__name__)
 
@@ -27,28 +27,38 @@ class WebsocketChatProtocol(object):
         self.pinger = None
 
         self.add_op_callback(opcode.PING, self._ping_handler)
+        loop = asyncio.get_event_loop()
 
         class WebsocketClient(WebSocketClientProtocol):
+            def ping(cl_self):
+                cl_self.sendMessage(opcode.PING)
+                self.pinger = loop.call_later(45, cl_self.ping)
+
             def onOpen(cl_self):
                 logger.info("Websocket connected.")
                 self.client = cl_self
-                self.pinger = task.LoopingCall(lambda: cl_self.sendMessage(opcode.PING))
-                self.pinger.start(45, False)
+                self.pinger = loop.call_later(45, cl_self.ping)
                 self.on_open()
 
-            def connectionLost(cl_self, reason):
+            def onClose(cl_self, wasClean, code, reason):
                 logger.info("Websocket connection closed with reason {explained}".format(explained=reason))
                 self.client = None
                 if self.pinger:
-                    self.pinger.stop()
+                    self.pinger.cancel()
                 self.on_close()
                 WebSocketClientProtocol.connectionLost(cl_self, reason)
 
             def onMessage(cl_self, message, binary):
                 if self.pinger:
-                    self.pinger.stop()
-                    self.pinger.start(45, False)
-                self.on_message(cl_self, message)
+                    self.pinger.cancel()
+                    self.pinger = loop.call_later(45, cl_self.ping)
+                self.on_message(cl_self, message.decode('utf8'))
+
+            def sendMessage(cl_self, payload):
+                if isinstance(payload, bytes):
+                    super().sendMessage(payload)
+                else:
+                    super().sendMessage(payload.encode('utf8'))
 
         factory = WebSocketClientFactory("ws://{server}:{port}".format(server=server, port=port), debug=False)
         factory.protocol = WebsocketClient
@@ -59,7 +69,9 @@ class WebsocketChatProtocol(object):
 
     def connect(self):
         if not self.client:
-            connectWS(self.factory)
+            loop = asyncio.get_event_loop()
+            proto = self.factory()
+            asyncio.Task(loop.create_connection(lambda: proto, self.factory.host, self.factory.port))
 
     @staticmethod
     def _load_json(message):
@@ -118,7 +130,7 @@ class WebsocketChatProtocol(object):
 class Character():
     def __init__(self, chat, name):
         """Characters are initiated as they become known."""
-        self.name = unicode(name)
+        self.name = str(name)
         self.websocket = chat.websocket
 
     def __unicode__(self):
@@ -269,16 +281,16 @@ class Connection():
         self.protocol.add_op_callback(opcode.VARIABLES, self._variables)
 
     def connect(self):
-        deferrence = defer.Deferred()
+        deferrence = asyncio.Future()
         o = self.protocol.on_open
         def on_open():
             o()
             self._introduce()
 
         def on_connected(data):
-            if data['identity'] == unicode(self.character):
+            if data['identity'] == str(self.character):
                 self.protocol.remove_op_callback(opcode.USER_CONNECTED, on_connected)
-                deferrence.callback(self)
+                deferrence.set_result(self)
 
         self.protocol.on_open = on_open
         self.protocol.add_op_callback(opcode.USER_CONNECTED, on_connected)
@@ -313,8 +325,8 @@ class Connection():
         data = {
             'method': 'ticket',
             'ticket': self.character.account.get_ticket(),
-            'account': unicode(self.character.account),
-            'character': unicode(self.character),
+            'account': str(self.character.account),
+            'character': str(self.character),
             'cname': "StormyDragons F-List Python client (stormweyr.dk)",
             'cversion': "pre-alpha",
         }
@@ -334,11 +346,11 @@ class Connection():
         pass # CCR { channel: "channel"
 
     def join(self, channelname):
-        d = defer.Deferred()
+        d = asyncio.Future()
 
         channel = self.public_channels.get(channelname, None)
         if channel:
-            d.errback()
+            d.cancel()
             return
 
         def on_join(channel_data):
@@ -347,7 +359,7 @@ class Connection():
                 channel_data.pop('character')
                 channel = Channel(self, **channel_data)
                 self.public_channels[channelname] = channel
-                d.callback(channel)
+                d.set_result(channel)
 
         self.protocol.add_op_callback(opcode.JOIN_CHANNEL, on_join)
         self.protocol.message(opcode.JOIN_CHANNEL, {'channel':channelname})
@@ -379,9 +391,9 @@ class Connection():
 
     def status(self, status, message):
         packet = {
-            'character': unicode(self.character),
-            'status': unicode(status),
-            'statusmsg': unicode(message)
+            'character': str(self.character),
+            'status': str(status),
+            'statusmsg': str(message)
         }
         self.protocol.message(opcode.STATUS, packet)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
 
