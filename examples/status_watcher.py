@@ -1,12 +1,10 @@
 import logging
 from flist import account_login, start_chat, opcode
 import asyncio
-#from twisted.internet import reactor, defer
 
 def log_status(data):
     logging.info(u"{character} is {status}: {statusmsg}".format(**data))
 
-# Using the deferredGenerator instead of a callback chain which would look messier.
 @asyncio.coroutine
 def connect(account, password, character_name):
     account = yield from account_login(account, password)
