@@ -16,7 +16,7 @@ def get_ticket(account, password):
         'password': password,
     }
     logger.info("F-List API call: getApiTicket{arguments}".format(arguments=data))
-    response = yield from aiohttp.request('get', "http://www.f-list.net/json/getApiTicket.php", data=data)
+    response = yield from aiohttp.request('get', "https://www.f-list.net/json/getApiTicket.php", data=data)
     ppp = yield from response.read()
     return json.loads(ppp.decode('utf8'))
 
@@ -24,7 +24,7 @@ def get_ticket(account, password):
 def flist_api_decorator(func):
     api_variables = func.__code__.co_varnames
     api_name = func.__name__
-    flist_api_url = "http://www.f-list.net/json/api/{function}.php"
+    flist_api_url = "https://www.f-list.net/json/api/{function}.php"
 
     @wraps(func)
     @asyncio.coroutine
