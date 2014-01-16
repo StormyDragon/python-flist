@@ -4,6 +4,8 @@ import asyncio
 import random
 import re
 
+logger = logging.getLogger('dice_bot')
+
 def roll_and_replace_dice(match):
     d = match.groupdict()
     number = int(d['number'])
@@ -29,7 +31,7 @@ def command_listener(channel, character, message):
             packet = {'character': character, 'dice': parsed, 'outcome': result}
             out = "{character} rolled {dice} yielding {outcome}".format(**packet)
             channel.send(out)
-            logging.info(out)
+            logger.info(out)
         else:
             channel.send("{character}: Nothing was interpreted.".format(character=character))
 
@@ -44,9 +46,8 @@ def connect(account, password, character_name):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-    logging.getLogger('flist').setLevel(logging.ERROR)  # Disregard debug messages from flist module.
-    logging.getLogger('asyncio').setLevel(logging.ERROR)  # Disregard messages that are not outright errors.
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+    logger.setLevel(logging.INFO)
     from sys import argv
-    asyncio.Task(connect(argv[1], argv[2], argv[3]))
+    asyncio.async(connect(argv[1], argv[2], argv[3]))
     asyncio.get_event_loop().run_forever()
