@@ -11,11 +11,11 @@ class AccountMissingException(Exception):
 class Character():
     def __init__(self, charactername, account):
         self.charname = charactername
-        self._account = weakref.ref(account)
+        self._account = account
 
     @property
     def account(self):
-        val = self._account()
+        val = self._account
         if not val:
             raise AccountMissingException("This character has no account associated to it.")
         return val

@@ -329,7 +329,7 @@ class Channel():
         pass # RST { channel: "channel", status: "status" } ("private", "public")
 
 
-class Connection():
+class Connection(object):
     def __init__(self, protocol, character):
         self.character = character
         self.public_channels = {}
