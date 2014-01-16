@@ -1,13 +1,110 @@
 import json
 import logging
-import opcode
-from twisted.internet import task, defer
-from autobahn.websocket import WebSocketClientProtocol, WebSocketClientFactory, connectWS
+import flist.opcode as opcode
+import asyncio
+import websockets
 
 logger = logging.getLogger(__name__)
 
 
-class WebsocketChatProtocol(object):
+class ConnectionCallbacks(object):
+    def on_open(self):
+        pass
+    def on_close(self, code, reason):
+        pass
+    def on_message(self, message):
+        pass
+
+
+class WebsocketsClientAdapter(ConnectionCallbacks):
+    def __init__(self, url, loop=None):
+        super().__init__()
+        self.url = url
+        self.loop = loop or asyncio.get_event_loop()
+
+    def connect(self):
+        asyncio.async(self._connect(), loop=self.loop)
+
+    @asyncio.coroutine
+    def _connect(self):
+        try:
+            self.websocket = yield from websockets.connect(self.url)
+            asyncio.async(self._inputhandler(), loop=self.loop)
+            self.on_open()
+        except websockets.InvalidURI:
+            self.on_close(-1, "Websockets: Malformed URI.")
+        except websockets.InvalidHandshake:
+            self.on_close(-2, "Websockets: Invalid handshake.")
+
+    @asyncio.coroutine
+    def _inputhandler(self):
+        try:
+            while self.websocket.open:
+                message = yield from self.websocket.recv()
+                self.on_message(message)
+        finally:
+            self.on_close(0, "Websockets: Connection was closed.")
+
+    def send_message(self, message):
+        self.websocket.send(message)
+
+
+class FChatPinger(WebsocketsClientAdapter):
+    def __init__(self, url, loop=None):
+        super().__init__(url, loop)
+        self.pinger = None
+
+    def ping(self):
+        self.send_message(opcode.PING)
+        self.pinger = self.loop.call_later(45, self.ping)
+
+    def on_open(self):
+        self.pinger = self.loop.call_later(45, self.ping)
+        super().on_open()
+
+    def on_close(self, code, reason):
+        if self.pinger:
+            self.pinger.cancel()
+        super().on_close(code, reason)
+
+    def on_message(self, message):
+        if self.pinger:
+            self.pinger.cancel()
+        self.pinger = self.loop.call_later(45, self.ping)
+        super().on_message(message)
+
+    def send_message(self, message):
+        if self.pinger:
+            self.pinger.cancel()
+        self.pinger = self.loop.call_later(45, self.ping)
+        super().send_message(message)
+
+
+class FChatTransport(WebsocketsClientAdapter):
+    def __init__(self, url, loop=None):
+        super().__init__(url, loop)
+        def_func = lambda *args: None
+        self.fchat_on_message = def_func
+        self.fchat_on_open = def_func
+        self.fchat_on_close = def_func
+
+    def on_open(self):
+        super().on_open()
+        self.fchat_on_open()
+
+    def on_close(self, code, reason):
+        self.fchat_on_close(code, reason)
+
+    def on_message(self, message):
+        super().on_message(message)
+        self.fchat_on_message(message)
+
+
+class DefaultFChatTransport(FChatTransport, FChatPinger):
+    pass
+
+
+class FChatProtocol(object):
     """Websocket protocol with included ping handler
     connect method: return deferred when the protocol is established.
 
@@ -17,49 +114,27 @@ class WebsocketChatProtocol(object):
     add_message_handler: accepts a method which receives the opcode and dict of the decoded JSON data.
     remove_message_handler
     """
-    def __init__(self, server, port):
+    def __init__(self, transport, loop=None):
         self.on_close = lambda: None
         self.on_open = lambda: None
 
         self.callbacks = {}
         self.handlers = []
-        self.client = None
+        self.transport = transport
+
         self.pinger = None
+        self.loop = loop or asyncio.get_event_loop()
 
         self.add_op_callback(opcode.PING, self._ping_handler)
 
-        class WebsocketClient(WebSocketClientProtocol):
-            def onOpen(cl_self):
-                logger.info("Websocket connected.")
-                self.client = cl_self
-                self.pinger = task.LoopingCall(lambda: cl_self.sendMessage(opcode.PING))
-                self.pinger.start(45, False)
-                self.on_open()
-
-            def connectionLost(cl_self, reason):
-                logger.info("Websocket connection closed with reason {explained}".format(explained=reason))
-                self.client = None
-                if self.pinger:
-                    self.pinger.stop()
-                self.on_close()
-                WebSocketClientProtocol.connectionLost(cl_self, reason)
-
-            def onMessage(cl_self, message, binary):
-                if self.pinger:
-                    self.pinger.stop()
-                    self.pinger.start(45, False)
-                self.on_message(cl_self, message)
-
-        factory = WebSocketClientFactory("ws://{server}:{port}".format(server=server, port=port), debug=False)
-        factory.protocol = WebsocketClient
-        self.factory = factory
+    def connect(self):
+        self.transport.fchat_on_message = self.on_message
+        self.transport.fchat_on_close = self.on_close
+        self.transport.fchat_on_open = self.on_open
+        self.transport.connect()
 
     def _ping_handler(self, message):
         self.message(opcode.PING)
-
-    def connect(self):
-        if not self.client:
-            connectWS(self.factory)
 
     @staticmethod
     def _load_json(message):
@@ -69,7 +144,7 @@ class WebsocketChatProtocol(object):
             j = None
         return j
 
-    def on_message(self, client, message):
+    def on_message(self, message):
         op = message[:3]
         callbacks = self.callbacks.get(op, [])
         j = self._load_json(message)
@@ -82,9 +157,9 @@ class WebsocketChatProtocol(object):
         logger.getChild(op).info("<-- %s" % (message,))
 
     def _write(self, message):
-        if self.client:
+        if self.transport:
             logger.getChild(message[:3]).info("--> %s" % (message,))
-            self.client.sendMessage(message)
+            self.transport.send_message(message)
         else:
             logger.error("Attempt to write message to Missing client.")
 
@@ -118,7 +193,7 @@ class WebsocketChatProtocol(object):
 class Character():
     def __init__(self, chat, name):
         """Characters are initiated as they become known."""
-        self.name = unicode(name)
+        self.name = str(name)
         self.websocket = chat.websocket
 
     def __unicode__(self):
@@ -255,6 +330,7 @@ class Channel():
     def set_status(self, status):
         pass # RST { channel: "channel", status: "status" } ("private", "public")
 
+
 class Connection():
     def __init__(self, protocol, character):
         self.character = character
@@ -269,16 +345,16 @@ class Connection():
         self.protocol.add_op_callback(opcode.VARIABLES, self._variables)
 
     def connect(self):
-        deferrence = defer.Deferred()
+        deferrence = asyncio.Future()
         o = self.protocol.on_open
         def on_open():
             o()
             self._introduce()
 
         def on_connected(data):
-            if data['identity'] == unicode(self.character):
+            if data['identity'] == str(self.character):
                 self.protocol.remove_op_callback(opcode.USER_CONNECTED, on_connected)
-                deferrence.callback(self)
+                deferrence.set_result(self)
 
         self.protocol.on_open = on_open
         self.protocol.add_op_callback(opcode.USER_CONNECTED, on_connected)
@@ -313,8 +389,8 @@ class Connection():
         data = {
             'method': 'ticket',
             'ticket': self.character.account.get_ticket(),
-            'account': unicode(self.character.account),
-            'character': unicode(self.character),
+            'account': str(self.character.account),
+            'character': str(self.character),
             'cname': "StormyDragons F-List Python client (stormweyr.dk)",
             'cversion': "pre-alpha",
         }
@@ -334,11 +410,11 @@ class Connection():
         pass # CCR { channel: "channel"
 
     def join(self, channelname):
-        d = defer.Deferred()
+        d = asyncio.Future()
 
         channel = self.public_channels.get(channelname, None)
         if channel:
-            d.errback()
+            d.cancel()
             return
 
         def on_join(channel_data):
@@ -347,7 +423,7 @@ class Connection():
                 channel_data.pop('character')
                 channel = Channel(self, **channel_data)
                 self.public_channels[channelname] = channel
-                d.callback(channel)
+                d.set_result(channel)
 
         self.protocol.add_op_callback(opcode.JOIN_CHANNEL, on_join)
         self.protocol.message(opcode.JOIN_CHANNEL, {'channel':channelname})
@@ -379,9 +455,9 @@ class Connection():
 
     def status(self, status, message):
         packet = {
-            'character': unicode(self.character),
-            'status': unicode(status),
-            'statusmsg': unicode(message)
+            'character': str(self.character),
+            'status': str(status),
+            'statusmsg': str(message)
         }
         self.protocol.message(opcode.STATUS, packet)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
 

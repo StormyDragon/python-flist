@@ -1,7 +1,7 @@
 import weakref
-import api
-import fchat
+import flist.api as api
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class Character():
             raise AccountMissingException("This character has no account associated to it.")
         return val
 
-    def __unicode__(self):
+    def __str__(self):
         return self.charname
 
 
@@ -28,10 +28,16 @@ class Account():
     def __init__(self, accountname, password):
         self.characters = {}
         self.account = accountname
-        self.refresh(password)
+        self.password = password
 
+    @asyncio.coroutine
+    def login(self):
+        yield from self.refresh(self.password)
+        return self
+
+    @asyncio.coroutine
     def refresh(self, password):
-        data = api.get_ticket(self.account, password)
+        data = yield from api.get_ticket(self.account, password)
         self.bookmarks = data['bookmarks']
         self.friends = data['friends']
         self.ticket = data['ticket']
@@ -42,5 +48,5 @@ class Account():
     def get_ticket(self):
         return self.ticket
 
-    def __unicode__(self):
+    def __str__(self):
         return self.account

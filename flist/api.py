@@ -1,11 +1,12 @@
 import json
 from functools import wraps
-from urllib import urlencode
-from urllib2 import Request, urlopen
+import aiohttp
+import asyncio
 
 import logging
 logger = logging.getLogger(__name__)
 
+@asyncio.coroutine
 def get_ticket(account, password):
     """You'll receive a ticket and a ton of other things that you probably won't need unless you're
     making an f-chat client. Tickets are valid for 24 hours from issue, and invalidate all previous
@@ -14,29 +15,28 @@ def get_ticket(account, password):
         'account': account,
         'password': password,
     }
-    r = Request("http://www.f-list.net/json/getApiTicket.php", urlencode(data))
-    val = urlopen(r)
-    ppp = val.read()
-    d = json.loads(ppp)
-    return d
+    logger.info("F-List API call: getApiTicket{arguments}".format(arguments=data))
+    response = yield from aiohttp.request('get', "https://www.f-list.net/json/getApiTicket.php", data=data)
+    ppp = yield from response.read()
+    return json.loads(ppp.decode('utf8'))
 
 # API definitions
-flist_api_url = "http://www.f-list.net/json/api/{function}.php"
-
 def flist_api_decorator(func):
-    api_variables = func.func_code.co_varnames
+    api_variables = func.__code__.co_varnames
     api_name = func.__name__
+    flist_api_url = "https://www.f-list.net/json/api/{function}.php"
 
     @wraps(func)
+    @asyncio.coroutine
     def wrapper(**kwargs):
         logger.info("F-List API call: {method}{arguments}".format(method=api_name, arguments=kwargs))
         data = {}
         for argument in api_variables:
             data[argument] = kwargs.get(argument)
-        r = Request(flist_api_url.format(function=api_name.replace('_', '-')), urlencode(data))
-        val = urlopen(r)
-        ppp = val.read()
-        d = json.loads(ppp)
+
+        response = yield from aiohttp.request('get', flist_api_url.format(function=api_name.replace('_', '-')), data=data)
+        ppp = yield from response.read()
+        d = json.loads(ppp.decode('utf8'))
         return d
 
     return wrapper
@@ -156,4 +156,4 @@ def request_send(account, ticket):
     """Send a friend request. source_name, dest_name."""
     pass
 
-del flist_api_decorator, flist_api_url
+del flist_api_decorator
