@@ -38,7 +38,7 @@ def command_listener(channel, character, message):
 @asyncio.coroutine
 def connect(account, password, character_name):
     account = yield from account_login(account, password)
-    character = account.characters[character_name]
+    character = account.get_character(character_name)
     chat = yield from start_chat(character, dev_chat=True)
     channel = yield from chat.join("Development")
     channel.add_listener(command_listener)

@@ -9,7 +9,7 @@ def log_status(data):
 @asyncio.coroutine
 def connect(account, password, character_name):
     account = yield from account_login(account, password)
-    character = account.characters[character_name]
+    character = account.get_character(character_name)
     logger.info("Starting chat.")
     chat = yield from start_chat(character, dev_chat=False)
     logger.info("Attaching log_status method.")

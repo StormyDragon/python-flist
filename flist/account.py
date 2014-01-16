@@ -29,6 +29,11 @@ class Account():
         self.characters = {}
         self.account = accountname
         self.password = password
+        self.bookmarks = []
+        self.friends = []
+        self.ticket = []
+        self.character_names = []
+        self.characters = weakref.WeakValueDictionary()
 
     @asyncio.coroutine
     def login(self):
@@ -41,9 +46,17 @@ class Account():
         self.bookmarks = data['bookmarks']
         self.friends = data['friends']
         self.ticket = data['ticket']
-        for charname in data['characters']:
-            c = Character(charname, self)
-            self.characters.setdefault(charname, c) # Update the character.
+        self.character_names = data['characters']
+
+    def get_character(self, charname):
+        try:
+            return self.characters[charname]
+        except KeyError:
+            if charname in self.character_names:
+                c = Character(charname, self)
+                self.characters[charname] = c
+                return c
+            raise
 
     def get_ticket(self):
         return self.ticket
