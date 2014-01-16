@@ -80,9 +80,9 @@ class FChatPinger(WebsocketsClientAdapter):
         super().send_message(message)
 
 
-class FChatTransport(WebsocketsClientAdapter):
-    def __init__(self, url, loop=None):
-        super().__init__(url, loop)
+class FChatTransport(ConnectionCallbacks):
+    def __init__(self):
+        super().__init__()
         def_func = lambda *args: None
         self.fchat_on_message = def_func
         self.fchat_on_open = def_func
@@ -100,7 +100,7 @@ class FChatTransport(WebsocketsClientAdapter):
         self.fchat_on_message(message)
 
 
-class DefaultFChatTransport(FChatTransport, FChatPinger):
+class DefaultFChatTransport(FChatPinger, FChatTransport):
     pass
 
 
@@ -248,9 +248,7 @@ class Character():
         pass # UBN { character: "character" }
 
     def announce_typing(self, status): # clear, paused, typing
-        d = {}
-        d['character'] = self.name
-        d['status'] = status
+        d = {'character': self.name, 'status': status}
         self.websocket.message(opcode.TYPING, d)
 
 

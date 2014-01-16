@@ -2,7 +2,7 @@ import unittest
 import asyncio
 import flist.api
 
-class TestFListAccount(unittest.TestCase):
+class TestFListAPI(unittest.TestCase):
     def setUp(self):
         pass
 
@@ -14,4 +14,7 @@ class TestFListAccount(unittest.TestCase):
             future.set_result(data)
 
         asyncio.get_event_loop().run_until_complete(get_info_list())
-        assert future.result()['error'] == ""
+        result = future.result()
+        self.assertIsInstance(result, dict, "The result must be a dict.")
+        self.assertTrue('error' in result, "The dict must contain a key named 'error'.")
+        self.assertIsInstance(result['error'], str, "The dict must contain a string on it's error key.")
