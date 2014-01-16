@@ -1,7 +1,7 @@
 python-flist
 ============
 
-[![Requirements Status](https://requires.io/github/StormyDragon/python-flist/requirements.png?branch=asyncio)](https://requires.io/github/StormyDragon/python-flist/requirements/?branch=asyncio)
+[![Requirements Status](https://requires.io/github/StormyDragon/python-flist/requirements.png?branch=asyncio)](https://requires.io/github/StormyDragon/python-flist/requirements/?branch=master)
 
 Python module for F-List
 
