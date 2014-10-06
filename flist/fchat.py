@@ -10,8 +10,10 @@ logger = logging.getLogger(__name__)
 class ConnectionCallbacks(object):
     def on_open(self):
         pass
+
     def on_close(self, code, reason):
         pass
+
     def on_message(self, message):
         pass
 
@@ -114,6 +116,7 @@ class FChatProtocol(object):
     add_message_handler: accepts a method which receives the opcode and dict of the decoded JSON data.
     remove_message_handler
     """
+
     def __init__(self, transport, loop=None):
         self.on_close = lambda: None
         self.on_open = lambda: None
@@ -187,6 +190,7 @@ class FChatProtocol(object):
         def deco(func):
             self.add_op_callback(status, func)
             return func
+
         return deco
 
 
@@ -198,56 +202,56 @@ class Character():
 
     def __unicode__(self):
         return self.name
-    
+
     def account_ban(self):
-        pass # ACB { character: "character" }
+        pass  # ACB { character: "character" }
 
     def make_op(self):
-        pass # AOP { character: "character" }
+        pass  # AOP { character: "character" }
 
     def get_alts(self):
-        pass # AWC { character: "character" }
+        pass  # AWC { character: "character" }
 
     def de_op(self):
-        pass # DOP { character: "character" }
+        pass  # DOP { character: "character" }
 
     def ignore(self):
-        pass # IGN { action: "add", character: "character" }
+        pass  # IGN { action: "add", character: "character" }
 
     def notify_ignored(self):
-        pass # IGN { action: "notify", character: "character" }
+        pass  # IGN { action: "notify", character: "character" }
 
     def unignore(self):
-        pass # IGN { action: "delete", character: "character" }
+        pass  # IGN { action: "delete", character: "character" }
 
     def ip_ban(self):
-        pass # IPB { character: "character" }
+        pass  # IPB { character: "character" }
 
     def kick(self):
-        pass # KIK { character: "character" }
+        pass  # KIK { character: "character" }
 
     def kinks(self):
-        pass # KIN { character: "character" }
+        pass  # KIN { character: "character" }
 
     def send(self, message):
-        pass # PRI { recipient: "recipient", message: "message" }
+        pass  # PRI { recipient: "recipient", message: "message" }
 
     def profile(self):
-        pass # PRO { character: "character" }
+        pass  # PRO { character: "character" }
 
     def reward(self):
-        pass # RWD { character: "character" } (status crown (cookie))
+        pass  # RWD { character: "character" } (status crown (cookie))
 
     def report(self):
-        pass # SFC { action: "action", report: "report", character: "character" }
+        pass  # SFC { action: "action", report: "report", character: "character" }
 
     def timeout(self, duration, message):
-        pass # TMO { character: "character",time: time, reason: "reason" } # Duration in minutes.
+        pass  # TMO { character: "character",time: time, reason: "reason" } # Duration in minutes.
 
     def unban(self):
-        pass # UBN { character: "character" }
+        pass  # UBN { character: "character" }
 
-    def announce_typing(self, status): # clear, paused, typing
+    def announce_typing(self, status):  # clear, paused, typing
         d = {'character': self.name, 'status': status}
         self.websocket.message(opcode.TYPING, d)
 
@@ -259,7 +263,7 @@ class Channel():
         self.name = channel
         self.mode = mode
         self.title = title or channel
-        
+
         self.protocol.add_op_callback(opcode.CHANNEL_MESSAGE, self._channel_message)
 
         self.callbacks = []
@@ -276,57 +280,58 @@ class Channel():
             for f in self.callbacks:
                 message.pop('channel')
                 f(self, **message)
-    
+
     def banlist(self):
-        pass # CBL { channel: "channel" }
+        pass  # CBL { channel: "channel" }
 
     def ban(self, character):
-        pass # CBU { channel: "channel", character: "character" }
+        pass  # CBU { channel: "channel", character: "character" }
 
     def set_description(self, newdescription):
-        pass # CDS { channel: "channel", description: "description" }
+        pass  # CDS { channel: "channel", description: "description" }
 
     def invite(self, character):
-        pass # CIU { channel: "channel", character: "character", title: "My very special channel" }
+        pass  # CIU { channel: "channel", character: "character", title: "My very special channel" }
 
     def kick(self, character):
-        pass # CKU { channel: "channel", character: "character" }
+        pass  # CKU { channel: "channel", character: "character" }
 
     def make_op(self, character):
-        pass # COA { channel: "channel", character: "character" }
+        pass  # COA { channel: "channel", character: "character" }
 
     def list_operators(self, character):
-        pass # COL { channel: "channel" }
+        pass  # COL { channel: "channel" }
 
     def remove_op(self, character):
-        pass # COR { channel: "channel", character: "character" }
+        pass  # COR { channel: "channel", character: "character" }
 
     def unban(self, character):
-        pass # CUB { channel: "channel", character: "character" }
+        pass  # CUB { channel: "channel", character: "character" }
 
     def part(self):
         d = {'channel': self.name}
         self.protocol.message(opcode.LEAVE_CHANNEL, d)
-        pass # LCH { channel: "channel" }
+        pass  # LCH { channel: "channel" }
 
     def join(self):
         d = {'channel': self.name}
         self.protocol.message(opcode.JOIN_CHANNEL, d)
-        pass # JCH { channel: "channel" }     JCH {"character": {"identity": "Hexxy"}, "channel": "Frontpage"}
+        pass  # JCH { channel: "channel" }     JCH {"character": {"identity": "Hexxy"}, "channel": "Frontpage"}
 
     def send(self, message):
         d = {'channel': self.name, 'message': message}
         self.protocol.message(opcode.CHANNEL_MESSAGE, d)
-        pass # MSG { channel: "channel", message: "message" } MSG {"message": "Right, evenin'", "character": "Aensland Morrigan", "channel": "Frontpage"}
+        pass  # MSG { channel: "channel", message: "message" }
+        # MSG {"message": "Right, evenin'", "character": "Aensland Morrigan", "channel": "Frontpage"}
 
     def advertise_channel(self):
-        pass # RAN { channel: "channel" }
+        pass  # RAN { channel: "channel" }
 
     def roll(self, dice):
-        pass # RLL { channel: "channel", dice: "1d10" }
+        pass  # RLL { channel: "channel", dice: "1d10" }
 
     def set_status(self, status):
-        pass # RST { channel: "channel", status: "status" } ("private", "public")
+        pass  # RST { channel: "channel", status: "status" } ("private", "public")
 
 
 class Connection(object):
@@ -345,6 +350,7 @@ class Connection(object):
     def connect(self):
         deferrence = asyncio.Future()
         o = self.protocol.on_open
+
         def on_open():
             o()
             self._introduce()
@@ -371,7 +377,8 @@ class Connection(object):
         self.variables[var['variable']] = var['value']
 
     def _update_channels(self, update_list, channel_list):
-        # {"channels":[{"name":"Dragons","mode":"both","characters":0},{"name":"Frontpage","mode":"both","characters":0}, ... ]}
+        # {"channels":[{"name":"Dragons","mode":"both","characters":0},{"name":"Frontpage"
+        #               ,"mode":"both","characters":0}, ... ]}
         # {"channels":[{"name":"ADH-********", "title": "Fuckit", "characters": 0}, ...]}
         channels = channel_list.get('channels', [])
         if channels:
@@ -401,11 +408,11 @@ class Connection(object):
         self._update_channels(self.private_channels, channel_list)
 
     def broadcast(self, message):
-        self.protocol.message(opcode.BROADCAST, {'message':message})
+        self.protocol.message(opcode.BROADCAST, {'message': message})
 
     def create_channel(self, channelname):
-        self.protocol.message(opcode.CREATE_PRIVATE_CHANNEL, {'channel':channelname})
-        pass # CCR { channel: "channel"
+        self.protocol.message(opcode.CREATE_PRIVATE_CHANNEL, {'channel': channelname})
+        pass  # CCR { channel: "channel"
 
     def join(self, channelname):
         d = asyncio.Future()
@@ -424,32 +431,34 @@ class Connection(object):
                 d.set_result(channel)
 
         self.protocol.add_op_callback(opcode.JOIN_CHANNEL, on_join)
-        self.protocol.message(opcode.JOIN_CHANNEL, {'channel':channelname})
+        self.protocol.message(opcode.JOIN_CHANNEL, {'channel': channelname})
         return d
 
     def update_global_channels(self):
         self.protocol.message(opcode.LIST_OFFICAL_CHANNELS)
-        pass # CHA
+        pass  # CHA
 
     def create_global_channel(self, channelname):
-        self.protocol.message(opcode.CREATE_OFFICAL_CHANNEL, {'channel':channelname})
-        pass # CRC { channel: "channel" }
+        self.protocol.message(opcode.CREATE_OFFICAL_CHANNEL, {'channel': channelname})
+        pass  # CRC { channel: "channel" }
 
     def search_kinks(self, kink, genders):
-        self.protocol.message(opcode.SEARCH, {'kink':kink, 'genders': list(genders)})
-        pass # FKS { kink: "kinkid", genders: [array] }    FKS {"kink":"523","genders":["Male","Female","Transgender","Herm","Shemale","Male-Herm","Cunt-boy","None"]}
+        self.protocol.message(opcode.SEARCH, {'kink': kink, 'genders': list(genders)})
+        pass
+        # FKS { kink: "kinkid", genders: [array] }
+        # FKS {"kink":"523","genders":["Male","Female","Transgender","Herm","Shemale","Male-Herm","Cunt-boy","None"]}
 
     def ignore_list(self):
-        self.protocol.message(opcode.IGNORE, {'action':'list'})
-        pass # IGN { action: "list" }
+        self.protocol.message(opcode.IGNORE, {'action': 'list'})
+        pass  # IGN { action: "list" }
 
     def list_ops(self):
         self.protocol.message(opcode.LIST_GLOBAL_OPS)
-        pass # OPP
+        pass  # OPP
 
     def update_private_channels(self):
         self.protocol.message(opcode.LIST_PRIVATE_CHANNELS)
-        pass # ORS
+        pass  # ORS
 
     def status(self, status, message):
         packet = {
@@ -457,7 +466,9 @@ class Connection(object):
             'status': str(status),
             'statusmsg': str(message)
         }
-        self.protocol.message(opcode.STATUS, packet)  # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
+        # STA {"status": "looking", "statusmsg": "I'm always available to RP :)", "character": "Hexxy"}
+        self.protocol.message(opcode.STATUS,
+                              packet)
 
     def uptime(self):
         self.protocol.message(opcode.UPTIME)
