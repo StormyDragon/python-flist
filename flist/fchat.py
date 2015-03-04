@@ -118,8 +118,8 @@ class FChatProtocol(object):
     """
 
     def __init__(self, transport, loop=None):
-        self.on_close = lambda: None
-        self.on_open = lambda: None
+        self.on_close = lambda *args: None
+        self.on_open = lambda *args: None
 
         self.callbacks = {}
         self.handlers = []
