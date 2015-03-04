@@ -16,7 +16,7 @@ def get_ticket(account, password):
         'password': password,
     }
     logger.info("F-List API call: getApiTicket{arguments}".format(arguments=data))
-    response = yield from aiohttp.request('get', "https://www.f-list.net/json/getApiTicket.php", data=data)
+    response = yield from aiohttp.request('post', "https://www.f-list.net/json/getApiTicket.php", data=data)
     ppp = yield from response.read()
     return json.loads(ppp.decode('utf8'))
 
@@ -34,7 +34,7 @@ def flist_api_decorator(func):
         for argument in api_variables:
             data[argument] = kwargs.get(argument)
 
-        response = yield from aiohttp.request('get', flist_api_url.format(function=api_name.replace('_', '-')), data=data)
+        response = yield from aiohttp.request('post', flist_api_url.format(function=api_name.replace('_', '-')), data=data)
         ppp = yield from response.read()
         d = json.loads(ppp.decode('utf8'))
         return d

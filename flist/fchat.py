@@ -48,7 +48,7 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
             self.on_close(0, "Websockets: Connection was closed.")
 
     def send_message(self, message):
-        self.websocket.send(message)
+        asyncio.async(self.websocket.send(message), loop=self.loop)
 
 
 class FChatPinger(WebsocketsClientAdapter):
