@@ -27,6 +27,9 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
     def connect(self):
         asyncio.async(self._connect(), loop=self.loop)
 
+    def close(self):
+        asyncio.async(self.websocket.close(), loop=self.loop)
+
     @asyncio.coroutine
     def _connect(self):
         try:
@@ -44,7 +47,10 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
             while self.websocket.open:
                 message = yield from self.websocket.recv()
                 self.on_message(message)
+        except TypeError:
+            logger.warn("Connection was closed on read.")
         finally:
+            logger.debug("Issuing on_close")
             self.on_close(0, "Websockets: Connection was closed.")
 
     def send_message(self, message):
@@ -131,10 +137,13 @@ class FChatProtocol(object):
         self.add_op_callback(opcode.PING, self._ping_handler)
 
     def connect(self):
-        self.transport.fchat_on_message = self.on_message
-        self.transport.fchat_on_close = self.on_close
-        self.transport.fchat_on_open = self.on_open
+        self.transport.fchat_on_message = lambda *args: self.on_message(*args)
+        self.transport.fchat_on_close = lambda *args: self.on_close(*args)
+        self.transport.fchat_on_open = lambda *args: self.on_open(*args)
         self.transport.connect()
+
+    def close(self):
+        self.transport.close()
 
     def _ping_handler(self, message):
         self.message(opcode.PING)
@@ -365,7 +374,11 @@ class Connection(object):
         self.protocol.connect()
         return deferrence
 
+    def close(self):
+        self.quit()
+
     def quit(self):
+        self.protocol.close()
         del self.protocol
         del self.public_channels
         del self.private_channels
