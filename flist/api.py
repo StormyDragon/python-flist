@@ -89,7 +89,7 @@ def character_info(account, ticket, name):
 
 
 @flist_api_decorator
-def character_kinks(account, ticket):
+def character_kinks(account, ticket, name):
     """Get a character's kinks. Requires one parameter, "name"."""
     pass
 
@@ -134,28 +134,28 @@ def friend_list(account, ticket):
 
 
 @flist_api_decorator
-def friend_remove(account, ticket):
+def friend_remove(account, ticket, source_name, dest_name):
     """Remove a profile from your friends. Takes two argument, "source_name" (your char)
     and "dest_name" (the character's friend you're removing)."""
     pass
 
 
 @flist_api_decorator
-def request_accept(account, ticket):
+def request_accept(account, ticket, request_id):
     """Accept an incoming friend request. Takes one argument, "request_id", which you
     can get with the request-list endpoint."""
     pass
 
 
 @flist_api_decorator
-def request_cancel(account, ticket):
+def request_cancel(account, ticket, request_id):
     """Cancel an outgoing friend request. Takes one argument, "request_id", which you can
     get with the request-pending endpoint."""
     pass
 
 
 @flist_api_decorator
-def request_deny(account, ticket):
+def request_deny(account, ticket, request_id):
     """Deny a friend request. Takes one argument, "request_id", which you can get with the request-list endpoint."""
     pass
 
@@ -173,7 +173,7 @@ def request_pending(account, ticket):
 
 
 @flist_api_decorator
-def request_send(account, ticket):
+def request_send(account, ticket, source_name, dest_name):
     """Send a friend request. source_name, dest_name."""
     pass
 
