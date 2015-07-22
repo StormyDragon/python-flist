@@ -31,8 +31,8 @@ setup(name='Python-flist',
           "Topic :: Software Development :: Libraries :: Python Modules",
       ],
       requires=[
-          'websockets',
-          'aiohttp (>=0.4.4)',
+          'websockets (>=2.4)',
+          'aiohttp (>=0.16.6)',
       ] + additional_requirements,
       provides=[
           'flist',
