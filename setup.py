@@ -3,7 +3,8 @@
 from distutils.core import setup
 import sys
 
-additional_requirements = []
+with open("requirements.txt") as file:
+    requirements = file.readlines()
 
 setup(name='Python-flist',
       version='0.1.0',
@@ -25,10 +26,7 @@ setup(name='Python-flist',
           "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
           "Topic :: Software Development :: Libraries :: Python Modules",
       ],
-      requires=[
-          'websockets (>=2.4)',
-          'aiohttp (>=0.16.6)',
-      ],
+      requires=requirements,
       provides=[
           'flist',
       ],
