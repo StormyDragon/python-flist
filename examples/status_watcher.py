@@ -21,5 +21,5 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     logger.setLevel(logging.INFO)
     from sys import argv
-    asyncio.async(connect(argv[1], argv[2], argv[3]))
+    asyncio.ensure_future(connect(argv[1], argv[2], argv[3]))
     asyncio.get_event_loop().run_forever()
