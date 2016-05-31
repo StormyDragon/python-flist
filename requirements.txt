@@ -1,2 +1,1 @@
-asyncio
-aiohttp>=0.20
+aiohttp (>=0.20)
