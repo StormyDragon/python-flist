@@ -3,8 +3,9 @@
 from distutils.core import setup
 import sys
 
-with open("requirements.txt") as file:
-    requirements = file.readlines()
+requirements = [
+    "aiohttp (>=0.20)",
+]
 
 setup(name='Python-flist',
       version='0.1.0',
@@ -26,7 +27,7 @@ setup(name='Python-flist',
           "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
           "Topic :: Software Development :: Libraries :: Python Modules",
       ],
-      requires=requirements,
+      install_requires=requirements,
       provides=[
           'flist',
       ],
