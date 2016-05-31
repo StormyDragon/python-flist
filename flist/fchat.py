@@ -42,14 +42,14 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
 
     async def _inputhandler(self):
         try:
-            async for msg in self.websocket:
-                if msg.tp == aiohttp.MsgType.text:
-                    self.on_message(msg.data)
-                elif msg.tp == aiohttp.MsgType.closed:
+            async for message in self.websocket:
+                if message.tp == aiohttp.MsgType.text:
+                    self.on_message(message.data)
+                elif message.tp == aiohttp.MsgType.closed:
                     logger.warn("Websocket connection closed.")
                     self.on_close(0, "Websockets: Connection was closed.")
                     break
-                elif msg.tp == aiohttp.MsgType.error:
+                elif message.tp == aiohttp.MsgType.error:
                     logger.error("Websocket error")
                     self.on_close(-1, "Websockets: Connection error")
                     break
@@ -176,7 +176,7 @@ class FChatProtocol(object):
 
     def _write(self, message):
         if self.transport:
-            logger.getChild(message[:3]).info("--> %s" % (message,))
+            logger.getChild(message[:3]).info("--> %s", message)
             self.transport.send_message(message)
         else:
             logger.error("Attempt to write message to Missing client.")
