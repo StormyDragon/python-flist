@@ -37,7 +37,7 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
             asyncio.ensure_future(self._inputhandler(), loop=self.loop)
             self.on_open()
         except:
-            logger.exception("Websocket exception")
+            logger.exception("Websocket error")
             self.on_close(-1, "Websockets: Shit broke")
 
     async def _inputhandler(self):
@@ -48,8 +48,11 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
                 elif msg.tp == aiohttp.MsgType.closed:
                     logger.warn("Websocket connection closed.")
                     self.on_close(0, "Websockets: Connection was closed.")
+                    break
                 elif msg.tp == aiohttp.MsgType.error:
                     logger.error("Websocket error")
+                    self.on_close(-1, "Websockets: Connection error")
+                    break
         except:
             logger.exception("Websocket Exception was thrown")
         finally:
