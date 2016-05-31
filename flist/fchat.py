@@ -2,7 +2,7 @@ import json
 import logging
 import flist.opcode as opcode
 import asyncio
-import websockets
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -23,36 +23,41 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
         super().__init__()
         self.url = url
         self.loop = loop or asyncio.get_event_loop()
+        self.session = aiohttp.ClientSession(loop=self.loop)
 
     def connect(self):
-        asyncio.async(self._connect(), loop=self.loop)
+        asyncio.ensure_future(self._connect(), loop=self.loop)
 
     def close(self):
-        asyncio.async(self.websocket.close(), loop=self.loop)
+        asyncio.ensure_future(self.websocket.close(), loop=self.loop)
 
     async def _connect(self):
         try:
-            self.websocket = await websockets.connect(self.url)
+            self.websocket = await self.session.ws_connect(self.url)
             asyncio.ensure_future(self._inputhandler(), loop=self.loop)
             self.on_open()
-        except websockets.InvalidURI:
-            self.on_close(-1, "Websockets: Malformed URI.")
-        except websockets.InvalidHandshake:
-            self.on_close(-2, "Websockets: Invalid handshake.")
+        except:
+            logger.exception("Websocket exception")
+            self.on_close(-1, "Websockets: Shit broke")
 
     async def _inputhandler(self):
         try:
-            while self.websocket.open:
-                message = await self.websocket.recv()
-                self.on_message(message)
-        except TypeError:
-            logger.warn("Connection was closed on read.")
+            async for msg in self.websocket:
+                if msg.tp == aiohttp.MsgType.text:
+                    self.on_message(msg.data)
+                elif msg.tp == aiohttp.MsgType.closed:
+                    logger.warn("Websocket connection closed.")
+                    self.on_close(0, "Websockets: Connection was closed.")
+                elif msg.tp == aiohttp.MsgType.error:
+                    logger.error("Websocket error")
+        except:
+            logger.exception("Websocket Exception was thrown")
         finally:
             logger.debug("Issuing on_close")
             self.on_close(0, "Websockets: Connection was closed.")
 
     def send_message(self, message):
-        asyncio.async(self.websocket.send(message), loop=self.loop)
+        self.websocket.send_str(message)
 
 
 class FChatPinger(WebsocketsClientAdapter):
