@@ -5,8 +5,10 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
+
 class AccountMissingException(Exception):
     pass
+
 
 class Character():
     def __init__(self, charactername, account):
@@ -35,14 +37,12 @@ class Account():
         self.character_names = []
         self.characters = weakref.WeakValueDictionary()
 
-    @asyncio.coroutine
-    def login(self):
-        yield from self.refresh(self.password)
+    async def login(self):
+        await self.refresh(self.password)
         return self
 
-    @asyncio.coroutine
-    def refresh(self, password):
-        data = yield from api.get_ticket(self.account, password)
+    async def refresh(self, password):
+        data = await api.get_ticket(self.account, password)
         self.bookmarks = data['bookmarks']
         self.friends = data['friends']
         self.ticket = data['ticket']

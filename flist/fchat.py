@@ -30,22 +30,20 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
     def close(self):
         asyncio.async(self.websocket.close(), loop=self.loop)
 
-    @asyncio.coroutine
-    def _connect(self):
+    async def _connect(self):
         try:
-            self.websocket = yield from websockets.connect(self.url)
-            asyncio.async(self._inputhandler(), loop=self.loop)
+            self.websocket = await websockets.connect(self.url)
+            asyncio.ensure_future(self._inputhandler(), loop=self.loop)
             self.on_open()
         except websockets.InvalidURI:
             self.on_close(-1, "Websockets: Malformed URI.")
         except websockets.InvalidHandshake:
             self.on_close(-2, "Websockets: Invalid handshake.")
 
-    @asyncio.coroutine
-    def _inputhandler(self):
+    async def _inputhandler(self):
         try:
             while self.websocket.open:
-                message = yield from self.websocket.recv()
+                message = await self.websocket.recv()
                 self.on_message(message)
         except TypeError:
             logger.warn("Connection was closed on read.")

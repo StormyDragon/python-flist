@@ -8,6 +8,7 @@ def account_login(account, password):
     account = Account(account, password)
     return account.login()
 
+
 def start_chat(character, server="chat.f-list.net", dev_chat=False, url=None):
     """Start an instance of fchat using the specified character.
     :param character: Character instance

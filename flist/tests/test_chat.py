@@ -1,8 +1,8 @@
 import unittest
-import json
 from flist.fchat import FChatProtocol, FChatTransport, Connection
 from flist.account import Character
 from flist import opcode
+
 
 class MockTransport(FChatTransport):
     def connect(self):
@@ -22,6 +22,7 @@ class MockAccount(object):
     def get_ticket(self):
         return "MockTicket"
 
+
 class TestFChatProtocol(unittest.TestCase):
     def setUp(self):
         # The test requires a mock transport for receiving messages.
@@ -31,6 +32,7 @@ class TestFChatProtocol(unittest.TestCase):
 
     def test_callbacks(self):
         result = None
+
         def callback(message):
             nonlocal result
             self.protocol.remove_op_callback(opcode.USER_CONNECTED, callback)
@@ -46,7 +48,6 @@ class TestFChatProtocol(unittest.TestCase):
         result = None
         self.mocktransport.on_message("""NLN {}""")
         self.assertEqual(result, None, "Callback should have been removed.")
-
 
     def test_pings(self):
         result = None

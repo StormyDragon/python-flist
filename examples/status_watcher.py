@@ -3,15 +3,17 @@ from flist import account_login, start_chat, opcode
 import asyncio
 
 logger = logging.getLogger('status_watcher')
+
+
 def log_status(data):
     logger.info(u"{character} is {status}: {statusmsg}".format(**data))
 
-@asyncio.coroutine
-def connect(account, password, character_name):
-    account = yield from account_login(account, password)
+
+async def connect(account, password, character_name):
+    account = await account_login(account, password)
     character = account.get_character(character_name)
     logger.info("Starting chat.")
-    chat = yield from start_chat(character, dev_chat=False)
+    chat = await start_chat(character, dev_chat=False)
     logger.info("Attaching log_status method.")
     chat.protocol.add_op_callback(opcode.STATUS, log_status)
 

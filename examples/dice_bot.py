@@ -6,11 +6,13 @@ import re
 
 logger = logging.getLogger('dice_bot')
 
+
 def roll_and_replace_dice(match):
     d = match.groupdict()
     number = int(d['number'])
     faces = int(d['faces'])
     return str(random.randint(number, number*faces))
+
 
 def parse(dice):
     dice = dice.strip().replace(" ", "")
@@ -22,6 +24,7 @@ def parse(dice):
         parsed_dice.append(number)
 
     return ''.join(parsed_dice), sum
+
 
 def command_listener(channel, character, message):
     if message.startswith("!roll "):
@@ -35,12 +38,11 @@ def command_listener(channel, character, message):
         else:
             channel.send("{character}: Nothing was interpreted.".format(character=character))
 
-@asyncio.coroutine
-def connect(account, password, character_name):
-    account = yield from account_login(account, password)
+async def connect(account, password, character_name):
+    account = await account_login(account, password)
     character = account.get_character(character_name)
-    chat = yield from start_chat(character, dev_chat=True)
-    channel = yield from chat.join("Development")
+    chat = await start_chat(character, dev_chat=False)
+    channel = await chat.join("Development")
     channel.add_listener(command_listener)
     channel.send("I am a dicebot; example: !roll 2d5 + 20")
 
@@ -49,5 +51,5 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     logger.setLevel(logging.INFO)
     from sys import argv
-    asyncio.async(connect(argv[1], argv[2], argv[3]))
+    asyncio.ensure_future(connect(argv[1], argv[2], argv[3]))
     asyncio.get_event_loop().run_forever()

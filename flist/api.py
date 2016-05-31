@@ -6,8 +6,8 @@ import asyncio
 import logging
 logger = logging.getLogger(__name__)
 
-@asyncio.coroutine
-def get_ticket(account, password):
+
+async def get_ticket(account, password):
     """You'll receive a ticket and a ton of other things that you probably won't need unless you're
     making an f-chat client. Tickets are valid for 24 hours from issue, and invalidate all previous
     tickets for the account when issued."""
@@ -16,9 +16,10 @@ def get_ticket(account, password):
         'password': password,
     }
     logger.info("F-List API call: getApiTicket{arguments}".format(arguments=data))
-    response = yield from aiohttp.request('post', "https://www.f-list.net/json/getApiTicket.php", data=data)
-    ppp = yield from response.read()
+    response = await aiohttp.request('post', "https://www.f-list.net/json/getApiTicket.php", data=data)
+    ppp = await response.read()
     return json.loads(ppp.decode('utf8'))
+
 
 # API definitions
 def flist_api_decorator(func):
@@ -27,15 +28,14 @@ def flist_api_decorator(func):
     flist_api_url = "https://www.f-list.net/json/api/{function}.php"
 
     @wraps(func)
-    @asyncio.coroutine
-    def wrapper(**kwargs):
+    async def wrapper(**kwargs):
         logger.info("F-List API call: {method}{arguments}".format(method=api_name, arguments=kwargs))
         data = {}
         for argument in api_variables:
             data[argument] = kwargs.get(argument)
 
-        response = yield from aiohttp.request('post', flist_api_url.format(function=api_name.replace('_', '-')), data=data)
-        ppp = yield from response.read()
+        response = await aiohttp.request('post', flist_api_url.format(function=api_name.replace('_', '-')), data=data)
+        ppp = await response.read()
         d = json.loads(ppp.decode('utf8'))
         return d
 
