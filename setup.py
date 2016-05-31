@@ -4,7 +4,7 @@ from distutils.core import setup
 import sys
 
 requirements = [
-    "aiohttp (>=0.20)",
+    "aiohttp>=0.20",
 ]
 
 setup(name='Python-flist',
