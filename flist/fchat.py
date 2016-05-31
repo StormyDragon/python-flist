@@ -55,9 +55,7 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
                     break
         except:
             logger.exception("Websocket Exception was thrown")
-        finally:
-            logger.debug("Issuing on_close")
-            self.on_close(0, "Websockets: Connection was closed.")
+            self.on_close(-2, "Websockets: Exception")
 
     def send_message(self, message):
         self.websocket.send_str(message)

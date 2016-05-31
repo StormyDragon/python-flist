@@ -34,9 +34,11 @@ setup(name='Python-flist',
 Framework for interacting with the F-list website
 -------------------------------------------------
 
+Python module for F-List
 
-This version requires Python 3.3 with asyncio, or Python 3.4
-websockets and aiohttp are also used (I kinda expect these kinds of modules to return to the standard library).""",
+This module requires python 3.5
+For HTTPS and websockets the aiohttp module is used.
+""",
 )
 
 

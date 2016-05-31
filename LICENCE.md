@@ -1,4 +1,4 @@
-Copyright (c) 2013, StormyDragon on github and the other folk working on this.
+Copyright (c) 2016, StormyDragon on github and the other folk working on this.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
