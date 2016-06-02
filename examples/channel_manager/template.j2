@@ -1,0 +1,8 @@
+Welcome to {{ channel }}.
+
+This is a template which is rendered into the channel topic.
+{% set operator_comma = joiner(", ") %}
+This channel has the following operators: {% for operator in channel_operators %}{{ operator_comma() }}[user]{{ operator }}[/user]{% endfor %}
+
+The following people !add'ed themselves to the topic:
+{% for user in channel_users %}[icon]{{ user }}[/icon]{{ loop.cycle("", "", "", "\n") }}{% endfor %}
