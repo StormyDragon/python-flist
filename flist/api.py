@@ -1,7 +1,5 @@
-import json
 from functools import wraps
 import aiohttp
-import asyncio
 
 import logging
 logger = logging.getLogger(__name__)
