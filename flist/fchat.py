@@ -170,7 +170,7 @@ class FChatProtocol(object):
 
         for h in self.handlers:
             h(op, j)
-        logger.getChild(op).info("<-- %s" % (message,))
+        logger.getChild(op).info("<-- %s", message)
 
     def _write(self, message):
         if self.transport:
@@ -207,7 +207,7 @@ class FChatProtocol(object):
         return deco
 
 
-class Character():
+class Character:
     def __init__(self, chat, name):
         """Characters are initiated as they become known."""
         self.name = str(name)
@@ -269,7 +269,7 @@ class Character():
         self.websocket.message(opcode.TYPING, d)
 
 
-class Channel():
+class Channel:
     def __init__(self, chat, channel, mode=None, title=None):
         """Channels are initiated as they become known."""
         self.protocol = chat.protocol

@@ -14,6 +14,7 @@ def start_chat(character, server="chat.f-list.net", dev_chat=False, url=None):
     :param character: Character instance
     :param server: The server to which we connect.
     :param dev_chat: determines which chat we connect to.
+    :param url: A url to completely replace the server/port behaviour
     :return deferred which fires with the chat instance once the connection has been established and introduction fired.
     """
     from flist.fchat import Connection, FChatProtocol, DefaultFChatTransport

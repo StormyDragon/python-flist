@@ -17,13 +17,13 @@ def roll_and_replace_dice(match):
 def parse(dice):
     dice = dice.strip().replace(" ", "")
     rolled = re.sub(r"(?P<number>\d+)(?:d|D)(?P<faces>\d+)", roll_and_replace_dice, dice)
-    sum = 0
+    dice_sum = 0
     parsed_dice = []
     for number in re.findall(r"((?:\+|-)?\d+)", rolled):
-        sum += int(number)
+        dice_sum += int(number)
         parsed_dice.append(number)
 
-    return ''.join(parsed_dice), sum
+    return ''.join(parsed_dice), dice_sum
 
 
 def command_listener(channel, character, message):

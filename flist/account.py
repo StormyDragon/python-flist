@@ -1,7 +1,6 @@
 import weakref
 import flist.api as api
 import logging
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +9,7 @@ class AccountMissingException(Exception):
     pass
 
 
-class Character():
+class Character:
     def __init__(self, charactername, account):
         self.charname = charactername
         self._account = account
@@ -26,7 +25,7 @@ class Character():
         return self.charname
 
 
-class Account():
+class Account:
     def __init__(self, accountname, password):
         self.characters = {}
         self.account = accountname

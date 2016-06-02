@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-import sys
 
 requirements = [
     "aiohttp>=0.20",
@@ -13,8 +12,8 @@ setup(name='Python-flist',
       author_email='stormy.pypi@stormweyr.dk',
       description='Python module for interacting with the f-list website.',
       url='https://github.com/StormyDragon/python-flist',
-      packages=['flist',],
-      keywords=['flist',],
+      packages=['flist'],
+      keywords=['flist'],
       classifiers=[
           "Development Status :: 2 - Pre-Alpha",
           "License :: OSI Approved :: BSD License",
@@ -31,7 +30,7 @@ setup(name='Python-flist',
       provides=[
           'flist',
       ],
-      long_description= """
+      long_description="""
 Framework for interacting with the F-list website
 -------------------------------------------------
 
@@ -40,6 +39,4 @@ Python module for F-List
 This module requires python 3.5
 For HTTPS and websockets the aiohttp module is used.
 """,
-)
-
-
+      )
