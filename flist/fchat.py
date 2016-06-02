@@ -276,8 +276,12 @@ class Channel:
         self.name = channel
         self.mode = mode
         self.title = title or channel
+        self.description = ""
+        self.operators = []
 
         self.protocol.add_op_callback(opcode.CHANNEL_MESSAGE, self._channel_message)
+        self.protocol.add_op_callback(opcode.LIST_OPS, self._channel_operators)
+        self.protocol.add_op_callback(opcode.SET_CHANNEL_DESCRIPTION, self._channel_description)
 
         self.callbacks = []
 
@@ -287,6 +291,13 @@ class Channel:
 
     def remove_listener(self, callback):
         self.callbacks.remove(callback)
+
+    def _channel_operators(self, message):
+        self.operators = message["oplist"]
+
+    def _channel_description(self, message):
+        if message['channel'] == self.name:
+            self.description = message['description']
 
     def _channel_message(self, message):
         if message['channel'] == self.name:
@@ -300,8 +311,10 @@ class Channel:
     def ban(self, character):
         pass  # CBU { channel: "channel", character: "character" }
 
-    def set_description(self, newdescription):
-        pass  # CDS { channel: "channel", description: "description" }
+    def set_description(self, new_description):
+        # CDS { channel: "channel", description: "description" }
+        d = {'channel': self.name, 'description': new_description}
+        self.protocol.message(opcode.SET_CHANNEL_DESCRIPTION, d)
 
     def invite(self, character):
         pass  # CIU { channel: "channel", character: "character", title: "My very special channel" }
@@ -327,15 +340,15 @@ class Channel:
         pass  # LCH { channel: "channel" }
 
     def join(self):
+        # JCH { channel: "channel" }     JCH {"character": {"identity": "Hexxy"}, "channel": "Frontpage"}
         d = {'channel': self.name}
         self.protocol.message(opcode.JOIN_CHANNEL, d)
-        pass  # JCH { channel: "channel" }     JCH {"character": {"identity": "Hexxy"}, "channel": "Frontpage"}
 
     def send(self, message):
+        # MSG { channel: "channel", message: "message" }
+        # MSG {"message": "Right, evenin'", "character": "Aensland Morrigan", "channel": "Frontpage"}
         d = {'channel': self.name, 'message': message}
         self.protocol.message(opcode.CHANNEL_MESSAGE, d)
-        pass  # MSG { channel: "channel", message: "message" }
-        # MSG {"message": "Right, evenin'", "character": "Aensland Morrigan", "channel": "Frontpage"}
 
     def advertise_channel(self):
         pass  # RAN { channel: "channel" }
