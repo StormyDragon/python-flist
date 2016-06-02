@@ -86,7 +86,7 @@ async def connect(account, password, character_name):
     development_channel = await chat.join("Development")
 
     def receive_invitation(message):
-        development_channel.send("""[user]{sender}[/user] invited me to join [session="{title}"]{name}[/session] for some kinky one on one testing.""".format(**message))
+        development_channel.send("""[user]{sender}[/user] invited me to join [session={title}]{name}[/session] for some kinky one on one testing.""".format(**message))
 
         asyncio.ensure_future(chat_invite(chat, message["sender"], message["name"]))
 
