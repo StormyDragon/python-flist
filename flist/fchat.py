@@ -105,6 +105,7 @@ class FChatTransport(ConnectionCallbacks):
         self.fchat_on_open()
 
     def on_close(self, code, reason):
+        super().on_close(code, reason)
         self.fchat_on_close(code, reason)
 
     def on_message(self, message):
