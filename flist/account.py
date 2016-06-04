@@ -32,7 +32,7 @@ class Account:
         self.password = password
         self.bookmarks = []
         self.friends = []
-        self.ticket = []
+        self._ticket = []
         self.character_names = []
         self.characters = weakref.WeakValueDictionary()
 
@@ -44,7 +44,7 @@ class Account:
         data = await api.get_ticket(self.account, password)
         self.bookmarks = data['bookmarks']
         self.friends = data['friends']
-        self.ticket = data['ticket']
+        self._ticket = data['ticket']
         self.character_names = data['characters']
 
     def get_character(self, charname):
@@ -57,8 +57,9 @@ class Account:
                 return c
             raise
 
-    def get_ticket(self):
-        return self.ticket
+    @property
+    def ticket(self):
+        return self._ticket
 
     def __str__(self):
         return self.account

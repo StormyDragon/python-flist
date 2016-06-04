@@ -427,7 +427,7 @@ class Connection(object):
     def _introduce(self):
         data = {
             'method': 'ticket',
-            'ticket': self.character.account.get_ticket(),
+            'ticket': self.character.account.ticket,
             'account': str(self.character.account),
             'character': str(self.character),
             'cname': "StormyDragons F-List Python client (stormweyr.dk)",

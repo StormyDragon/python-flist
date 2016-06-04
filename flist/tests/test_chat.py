@@ -19,7 +19,8 @@ class MockAccount(object):
         self.bookmarks = []
         self.friends = []
 
-    def get_ticket(self):
+    @property
+    def ticket(self):
         return "MockTicket"
 
 
