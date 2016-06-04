@@ -48,5 +48,4 @@ class CloserProvider(Provider):
 
 
 class CountCloserProvider(CloserProvider, CountProvider):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    pass
