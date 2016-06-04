@@ -1,9 +1,11 @@
 import json
 import logging
+from functools import partial
+
 import flist.opcode as opcode
 import asyncio
 import aiohttp
-from flist.aiter_provider import Provider
+from flist.aiter_provider import CountCloserProvider, CloserProvider
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +106,10 @@ class FChatTransport(ConnectionCallbacks):
     def _empty(*args):
         pass
 
+    @staticmethod
+    def _empty(*args):
+        pass
+
     def on_open(self):
         super().on_open()
         self.fchat_on_open()
@@ -170,8 +176,16 @@ class FChatProtocol(object):
         callbacks = self.callbacks.get(op, [])
         j = self._load_json(message)
 
-        for f in callbacks:
-            f(j)
+        for f in callbacks.copy():
+            # noinspection PyBroadException
+            try:
+                f(j)
+            except BrokenPipeError:
+                callbacks.remove(f)  # Caused by a closed provider.
+            except Exception:
+                callbacks.remove(f)
+                logger.exception("While processing callbacks another exception"
+                                 " occurred, callback function has been removed")
 
         for h in self.handlers:
             h(op, j)
@@ -510,9 +524,12 @@ class Connection(object):
     def uptime(self):
         self.protocol.message(opcode.UPTIME)
 
-    def provider(self, opcode):
-        provider = Provider()
-        self.protocol.add_op_callback(opcode, provider.put_item)
+    def provider(self, opcode_, *, count=None):
+        closer = partial(self.protocol.remove_op_callback, opcode_)
+        if count:
+            provider = CountCloserProvider(closer=closer, count=count)
+        else:
+            provider = CloserProvider(closer=closer)
+        self.protocol.add_op_callback(opcode_, provider.put_item)
         self._closables.append(provider)
         return provider
-
