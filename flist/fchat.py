@@ -3,6 +3,7 @@ import logging
 import flist.opcode as opcode
 import asyncio
 import aiohttp
+from flist.aiter_provider import Provider
 
 logger = logging.getLogger(__name__)
 
@@ -363,6 +364,7 @@ class Channel:
 
 class Connection(object):
     def __init__(self, protocol, character):
+        self._closables = [protocol]
         self.character = character
         self.public_channels = {}
         self.private_channels = {}
@@ -396,7 +398,8 @@ class Connection(object):
         self.quit()
 
     def quit(self):
-        self.protocol.close()
+        for c in self._closables:
+            c.close()
         del self.protocol
         del self.public_channels
         del self.private_channels
@@ -503,3 +506,10 @@ class Connection(object):
 
     def uptime(self):
         self.protocol.message(opcode.UPTIME)
+
+    def provider(self, opcode):
+        provider = Provider()
+        self.protocol.add_op_callback(opcode, provider.put_item)
+        self._closables.append(provider)
+        return provider
+

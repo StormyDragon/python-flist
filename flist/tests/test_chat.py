@@ -93,4 +93,3 @@ class TestFChat(unittest.TestCase):
 
         future = self.chat.connect()
         self.assertIsInstance(future.result(), Connection, "Future contains connection on successful identification.")
-
