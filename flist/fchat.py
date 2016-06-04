@@ -462,8 +462,8 @@ class Connection(object):
         self.protocol.message(opcode.BROADCAST, {'message': message})
 
     def create_channel(self, channelname):
+        # CCR { channel: "channel"
         self.protocol.message(opcode.CREATE_PRIVATE_CHANNEL, {'channel': channelname})
-        pass  # CCR { channel: "channel"
 
     def join(self, channelname):
         d = asyncio.Future()
@@ -486,30 +486,29 @@ class Connection(object):
         return d
 
     def update_global_channels(self):
+        # CHA
         self.protocol.message(opcode.LIST_OFFICAL_CHANNELS)
-        pass  # CHA
 
     def create_global_channel(self, channelname):
+        # CRC { channel: "channel" }
         self.protocol.message(opcode.CREATE_OFFICAL_CHANNEL, {'channel': channelname})
-        pass  # CRC { channel: "channel" }
 
     def search_kinks(self, kink, genders):
-        self.protocol.message(opcode.SEARCH, {'kink': kink, 'genders': list(genders)})
-        pass
         # FKS { kink: "kinkid", genders: [array] }
         # FKS {"kink":"523","genders":["Male","Female","Transgender","Herm","Shemale","Male-Herm","Cunt-boy","None"]}
+        self.protocol.message(opcode.SEARCH, {'kink': kink, 'genders': list(genders)})
 
     def ignore_list(self):
+        # IGN { action: "list" }
         self.protocol.message(opcode.IGNORE, {'action': 'list'})
-        pass  # IGN { action: "list" }
 
     def list_ops(self):
+        # OPP
         self.protocol.message(opcode.LIST_GLOBAL_OPS)
-        pass  # OPP
 
     def update_private_channels(self):
+        # ORS
         self.protocol.message(opcode.LIST_PRIVATE_CHANNELS)
-        pass  # ORS
 
     def status(self, status, message):
         packet = {
