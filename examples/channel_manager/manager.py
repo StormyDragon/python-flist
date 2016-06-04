@@ -1,8 +1,6 @@
-import sqlite3
 import logging
 from flist import account_login, start_chat, opcode
 import asyncio
-from functools import partial
 from jinja2 import Template
 
 logger = logging.getLogger('channel_manager')
