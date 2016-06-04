@@ -13,7 +13,7 @@ async def connect(account, password, character_name):
     account = await account_login(account, password)
     character = account.get_character(character_name)
     logger.info("Starting chat.")
-    chat = await start_chat(character, dev_chat=False)
+    chat = await start_chat(character)
     logger.info("Attaching log_status method.")
     status_provider = chat.provider(opcode.STATUS)
     await log_status_async(status_provider)
