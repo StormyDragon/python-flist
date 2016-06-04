@@ -96,10 +96,13 @@ class FChatPinger(WebsocketsClientAdapter):
 class FChatTransport(ConnectionCallbacks):
     def __init__(self):
         super().__init__()
-        def_func = lambda *args: None
-        self.fchat_on_message = def_func
-        self.fchat_on_open = def_func
-        self.fchat_on_close = def_func
+        self.fchat_on_message = self._empty
+        self.fchat_on_open = self._empty
+        self.fchat_on_close = self._empty
+
+    @staticmethod
+    def _empty(*args):
+        pass
 
     def on_open(self):
         super().on_open()
