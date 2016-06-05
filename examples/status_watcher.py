@@ -15,7 +15,7 @@ async def connect(account, password, character_name):
     logger.info("Starting chat.")
     chat = await start_chat(character)
     logger.info("Attaching log_status method.")
-    status_provider = chat.provider(opcode.STATUS)
+    status_provider = chat.watch(opcode.STATUS)
     await log_status_async(status_provider)
 
 if __name__ == '__main__':

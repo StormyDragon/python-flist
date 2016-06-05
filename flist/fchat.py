@@ -523,7 +523,7 @@ class Connection(object):
     def uptime(self):
         self.protocol.message(opcode.UPTIME)
 
-    def provider(self, opcode_, *, count=None):
+    def watch(self, opcode_, *, count=None):
         closer = partial(self.protocol.remove_op_callback, opcode_)
         if count:
             provider = CountCloserProvider(closer=closer, count=count)
