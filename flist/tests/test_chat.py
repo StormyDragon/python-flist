@@ -1,7 +1,10 @@
 import unittest
-from flist.fchat import FChatProtocol, FChatTransport, Connection
-from flist.account import Character
+
 from flist import opcode
+from flist.account import Character
+from flist.chat.protocol import FChatProtocol
+from flist.chat.transport import FChatTransport
+from flist.fchat import Connection
 
 
 class MockTransport(FChatTransport):

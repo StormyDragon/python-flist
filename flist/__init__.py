@@ -17,7 +17,9 @@ def start_chat(character, url="wss://chat.f-list.net:9799"):
     :param url: A url to completely replace the server/port behaviour
     :return deferred which fires with the chat instance once the connection has been established and introduction fired.
     """
-    from flist.fchat import Connection, FChatProtocol, DefaultFChatTransport
+    from flist.fchat import Connection
+    from flist.chat.protocol import FChatProtocol
+    from flist.chat.transport import DefaultFChatTransport
     transport = DefaultFChatTransport(url)
     protocol = FChatProtocol(transport)
     chat = Connection(protocol, character).connect()
