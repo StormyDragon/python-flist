@@ -80,7 +80,7 @@ async def chat_invite(chat, whom, channel_name):
 async def connect(account, password, character_name):
     account = await account_login(account, password)
     character = account.get_character(character_name)
-    chat = await start_chat(character, dev_chat=False)
+    chat = await start_chat(character)
     development_channel = await chat.join("Development")
 
     def receive_invitation(message):

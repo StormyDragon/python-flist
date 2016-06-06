@@ -41,7 +41,7 @@ def command_listener(channel, character, message):
 async def connect(account, password, character_name):
     account = await account_login(account, password)
     character = account.get_character(character_name)
-    chat = await start_chat(character, dev_chat=False)
+    chat = await start_chat(character)
     channel = await chat.join("Development")
     channel.add_listener(command_listener)
     channel.send("I am a dicebot; example: !roll 2d5 + 20")
