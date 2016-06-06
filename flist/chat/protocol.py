@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 
-from flist import opcode as opcode
+from flist.chat import opcode as opcode
 
 logger = logging.getLogger(__name__)
 

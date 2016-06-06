@@ -1,9 +1,9 @@
-import logging
 import asyncio
+import logging
 
 import aiohttp
 
-from flist import opcode as opcode
+from flist.chat import opcode as opcode
 
 logger = logging.getLogger(__name__)
 

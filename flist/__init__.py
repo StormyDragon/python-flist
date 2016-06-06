@@ -1,3 +1,5 @@
+from flist.chat import opcode
+
 
 def account_login(account, password):
     """Log in to an f-list account.

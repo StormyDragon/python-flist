@@ -1,7 +1,7 @@
 import unittest
 
-from flist import opcode
 from flist.account import Character
+from flist.chat import opcode
 from flist.chat.protocol import FChatProtocol
 from flist.chat.transport import FChatTransport
 from flist.fchat import Connection

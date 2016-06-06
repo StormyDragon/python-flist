@@ -2,7 +2,7 @@ import asyncio
 import logging
 from functools import partial
 
-import flist.opcode as opcode
+import flist.chat.opcode as opcode
 from flist.aiter_provider import CountCloserProvider, CloserProvider
 
 logger = logging.getLogger(__name__)
