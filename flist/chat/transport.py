@@ -32,6 +32,9 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
         self.loop = loop or asyncio.get_event_loop()
         self.session = aiohttp.ClientSession(loop=self.loop)
 
+    def __del__(self):
+        self.session.close()
+
     def connect(self):
         asyncio.ensure_future(self._connect(), loop=self.loop)
 
