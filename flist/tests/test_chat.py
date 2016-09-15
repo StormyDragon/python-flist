@@ -1,9 +1,12 @@
 import unittest
 
+import asyncio
+from unittest.mock import Mock, patch
+
 from flist.account import Character
 from flist.chat import opcode
 from flist.chat.protocol import FChatProtocol
-from flist.chat.transport import FChatTransport
+from flist.chat.transport import FChatTransport, FChatPinger, TransportErrors
 from flist.fchat import Connection
 
 
@@ -62,6 +65,32 @@ class TestFChatProtocol(unittest.TestCase):
         self.mocktransport.send_message = callback
         self.mocktransport.on_message("PIN")
         self.assertEqual(result, 'PIN', "The protocol responds to pings.")
+
+
+class TestFChatPinger(unittest.TestCase):
+    class MockFChatPinger(FChatPinger):
+        def connect(self):
+            self.on_open()
+
+    class PingFailureException(Exception):
+        pass
+
+    def setUp(self):
+        # The test requires a mock transport for receiving messages.
+        self.mocked_loop = Mock(spec=asyncio.get_event_loop())
+        self.mocktransport = self.MockFChatPinger("localhost", loop=self.mocked_loop)
+        self.protocol = FChatProtocol(self.mocktransport)
+        self.protocol.connect()
+
+    def test_pings_connection_closed(self):
+        self.assertTrue(self.mocked_loop.call_later.called, "Call later must have been called.")
+        (seconds, function), kwargs = self.mocked_loop.call_later.call_args
+        with patch.object(self.mocktransport, 'send_message') as send_message:
+            send_message.side_effect = self.PingFailureException()
+            with patch.object(self.mocktransport, 'on_close') as on_close:
+                with self.assertRaises(self.PingFailureException):
+                    function()
+                on_close.assert_called_with(*TransportErrors.connection_exception)
 
 
 class TestFChat(unittest.TestCase):

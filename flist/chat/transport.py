@@ -77,8 +77,14 @@ class FChatPinger(WebsocketsClientAdapter):
         self.pinger = None
 
     def ping(self):
-        self.send_message(opcode.PING)
-        self.pinger = self.loop.call_later(45, self.ping)
+        try:
+            self.send_message(opcode.PING)
+        except:
+            logger.exception("Pinger met with exception.")
+            self.on_close(*TransportErrors.connection_exception)
+            raise
+        else:
+            self.pinger = self.loop.call_later(45, self.ping)
 
     def on_open(self):
         self.pinger = self.loop.call_later(45, self.ping)
@@ -108,10 +114,6 @@ class FChatTransport(ConnectionCallbacks):
         self.fchat_on_message = self._empty
         self.fchat_on_open = self._empty
         self.fchat_on_close = self._empty
-
-    @staticmethod
-    def _empty(*args):
-        pass
 
     @staticmethod
     def _empty(*args):
