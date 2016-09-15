@@ -8,6 +8,12 @@ from flist.chat import opcode as opcode
 logger = logging.getLogger(__name__)
 
 
+class TransportErrors:
+    connection_closed = (0, "Websocket: Closed")
+    connection_error = (-1, "Websocket: Error")
+    connection_exception = (-2, "Websocket: Exception")
+
+
 class ConnectionCallbacks(object):
     def on_open(self):
         pass
@@ -39,7 +45,7 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
             self.on_open()
         except:
             logger.exception("Websocket error")
-            self.on_close(-1, "Websockets: Shit broke")
+            self.on_close(*TransportErrors.connection_error)
 
     async def _inputhandler(self):
         try:
@@ -48,15 +54,15 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
                     self.on_message(message.data)
                 elif message.tp == aiohttp.MsgType.closed:
                     logger.warn("Websocket connection closed.")
-                    self.on_close(0, "Websockets: Connection was closed.")
+                    self.on_close(*TransportErrors.connection_closed)
                     break
                 elif message.tp == aiohttp.MsgType.error:
                     logger.error("Websocket error")
-                    self.on_close(-1, "Websockets: Connection error")
+                    self.on_close(*TransportErrors.connection_error)
                     break
         except:
             logger.exception("Websocket Exception was thrown")
-            self.on_close(-2, "Websockets: Exception")
+            self.on_close(*TransportErrors.connection_exception)
 
     def send_message(self, message):
         self.websocket.send_str(message)
