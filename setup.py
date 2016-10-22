@@ -2,6 +2,8 @@
 
 from distutils.core import setup
 
+from setuptools import find_packages
+
 requirements = [
     "aiohttp>=0.20",
 ]
@@ -12,7 +14,7 @@ setup(name='Python-flist',
       author_email='stormy.pypi@stormweyr.dk',
       description='Python module for interacting with the f-list website.',
       url='https://github.com/StormyDragon/python-flist',
-      packages=['flist'],
+      packages=find_packages(exclude=['examples']),
       keywords=['flist'],
       classifiers=[
           "Development Status :: 2 - Pre-Alpha",
