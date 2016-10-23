@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from inspect import isawaitable
 
 from flist.chat import opcode as opcode
 
@@ -59,7 +60,9 @@ class FChatProtocol(object):
         for f in callbacks.copy():
             # noinspection PyBroadException
             try:
-                f(j)
+                r = f(j)
+                if isawaitable(r):
+                    asyncio.ensure_future(r, loop=self.loop)
             except BrokenPipeError:
                 callbacks.remove(f)  # Caused by a closed provider.
             except Exception:
