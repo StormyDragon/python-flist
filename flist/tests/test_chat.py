@@ -78,6 +78,7 @@ class TestFChatPinger(unittest.TestCase):
     def setUp(self):
         # The test requires a mock transport for receiving messages.
         self.mocked_loop = Mock(spec=asyncio.get_event_loop())
+        self.mocked_loop.time.return_value = 0.0
         self.mocktransport = self.MockFChatPinger("localhost", loop=self.mocked_loop)
         self.protocol = FChatProtocol(self.mocktransport)
         self.protocol.connect()
