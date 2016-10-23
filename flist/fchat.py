@@ -184,9 +184,14 @@ class Connection(object):
             self._introduce()
 
         def on_connected(data):
-            if data['identity'] == str(self.character):
+            try:
+                if data['identity'] == str(self.character):
+                    deferrence.set_result(self)
+                else:
+                    logger.error(data)
+                    deferrence.set_exception(Exception("Received invalid identity response."))
+            finally:
                 self.protocol.remove_op_callback(opcode.USER_CONNECTED, on_connected)
-                deferrence.set_result(self)
 
         self.protocol.on_open = on_open
         self.protocol.add_op_callback(opcode.USER_CONNECTED, on_connected)
