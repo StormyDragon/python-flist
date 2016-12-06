@@ -12,12 +12,13 @@ class Character:
     def __init__(self, chat, name):
         """Characters are initiated as they become known."""
         self.name = str(name)
-        self.websocket = chat.websocket
+        self.protocol = chat.protocol
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def account_ban(self):
+        self.protocol.message(opcode.ACCOUNT_BAN, {'character': self.name})
         pass  # ACB { character: "character" }
 
     def make_op(self):
@@ -48,13 +49,23 @@ class Character:
         pass  # KIN { character: "character" }
 
     def send(self, message):
-        pass  # PRI { recipient: "recipient", message: "message" }
+        self.protocol.message(
+            opcode.PRIVATE_MESSAGE,
+            {'recipient': self.name, 'message': message}
+        )
 
     def profile(self):
-        pass  # PRO { character: "character" }
+        self.protocol.message(
+            opcode.PROFILE,
+            {'character': self.name}
+        )
+        pass  # PRO { character: "character" } -> PROFILE_DATA
 
     def reward(self):
-        pass  # RWD { character: "character" } (status crown (cookie))
+        self.protocol.message(
+            opcode.REWARD,
+            {'character': self.name}
+        )
 
     def report(self):
         pass  # SFC { action: "action", report: "report", character: "character" }
@@ -67,7 +78,7 @@ class Character:
 
     def announce_typing(self, status):  # clear, paused, typing
         d = {'character': self.name, 'status': status}
-        self.websocket.message(opcode.TYPING, d)
+        self.protocol.message(opcode.TYPING, d)
 
 
 class Channel:
@@ -161,6 +172,15 @@ class Channel:
         pass  # RST { channel: "channel", status: "status" } ("private", "public")
 
 
+class ItemEnricher:
+    def __init__(self, callable):
+        self.callable = callable
+
+    def __call__(self, opcode, message):
+        enriched_message = message.copy()
+        self.callable(enriched_message)
+
+
 class Connection(object):
     def __init__(self, protocol, character):
         self._closables = [protocol]
@@ -178,10 +198,12 @@ class Connection(object):
     def connect(self):
         deferrence = asyncio.Future()
         o = self.protocol.on_open
+        c = self.protocol.on_close
 
         def on_open():
             o()
             self._introduce()
+            self.protocol.on_close = c
 
         def on_connected(data):
             try:
@@ -192,6 +214,10 @@ class Connection(object):
                     deferrence.set_exception(Exception("Received invalid identity response."))
             finally:
                 self.protocol.remove_op_callback(opcode.USER_CONNECTED, on_connected)
+
+        def on_close(reason):
+            c(reason)
+            deferrence.set_exception(ConnectionResetError(reason))
 
         self.protocol.on_open = on_open
         self.protocol.add_op_callback(opcode.USER_CONNECTED, on_connected)
@@ -257,8 +283,8 @@ class Connection(object):
 
         channel = self.public_channels.get(channelname, None)
         if channel:
-            d.cancel()
-            return
+            d.set_result(channel)
+            return d
 
         def on_join(channel_data):
             if channel_data['channel'] == channelname:
@@ -316,6 +342,6 @@ class Connection(object):
             provider = CountCloserProvider(closer=closer, count=count)
         else:
             provider = CloserProvider(closer=closer)
-        self.protocol.add_op_callback(opcode_, provider.put_item)
+        self.protocol.add_op_callback(opcode_, ItemEnricher(provider.put_item))
         self._closables.append(provider)
         return provider

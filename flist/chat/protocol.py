@@ -47,7 +47,7 @@ class FChatProtocol(object):
     @staticmethod
     def _load_json(message):
         try:
-            j = json.loads(message[4:])
+            j = json.loads(message)
         except ValueError:
             j = None
         return j
@@ -55,12 +55,12 @@ class FChatProtocol(object):
     def on_message(self, message):
         op = message[:3]
         callbacks = self.callbacks.get(op, [])
-        j = self._load_json(message)
+        json = self._load_json(message[4:])
 
         for f in callbacks.copy():
             # noinspection PyBroadException
             try:
-                r = f(j)
+                r = f(json)
                 if isawaitable(r):
                     asyncio.ensure_future(r, loop=self.loop)
             except BrokenPipeError:
@@ -71,7 +71,7 @@ class FChatProtocol(object):
                                  " occurred, callback function has been removed")
 
         for h in self.handlers:
-            h(op, j)
+            h(op, json)
         logger.getChild(op).info("<-- %s", message)
 
     def _write(self, message):
