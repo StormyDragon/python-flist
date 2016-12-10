@@ -220,6 +220,7 @@ class Connection(object):
             deferrence.set_exception(ConnectionResetError(reason))
 
         self.protocol.on_open = on_open
+        self.protocol.on_close = on_close
         self.protocol.add_op_callback(opcode.USER_CONNECTED, on_connected)
         self.protocol.connect()
         return deferrence
