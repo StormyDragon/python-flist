@@ -215,8 +215,8 @@ class Connection(object):
             finally:
                 self.protocol.remove_op_callback(opcode.USER_CONNECTED, on_connected)
 
-        def on_close(reason):
-            c(reason)
+        def on_close(code, reason):
+            c(code, reason)
             deferrence.set_exception(ConnectionResetError(reason))
 
         self.protocol.on_open = on_open
