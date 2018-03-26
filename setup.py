@@ -5,7 +5,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 requirements = [
-    "aiohttp>=0.20",
+    "aiohttp>=3.1.0",
 ]
 
 setup(name='Python-flist',
