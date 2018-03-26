@@ -14,7 +14,7 @@ async def get_ticket(account, password):
         'password': password,
     }
     logger.info("F-List API call: getApiTicket{arguments}".format(arguments=data))
-    with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession() as session:
         async with session.post("https://www.f-list.net/json/getApiTicket.php", data=data) as response:
             return await response.json()
 
@@ -32,7 +32,7 @@ def flist_api_decorator(func):
         for argument in api_variables:
             data[argument] = kwargs.get(argument)
 
-        with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession() as session:
             async with session.post(flist_api_url.format(function=api_name.replace('_', '-')), data=data) as response:
                 return await response.json()
 
