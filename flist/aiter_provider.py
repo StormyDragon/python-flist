@@ -11,7 +11,7 @@ class Provider:
         self.current_value = asyncio.Future()
         self.buffer.append(self.current_value)
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
 
     async def __anext__(self):
