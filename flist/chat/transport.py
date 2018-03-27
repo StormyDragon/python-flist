@@ -44,13 +44,13 @@ class WebsocketsClientAdapter(ConnectionCallbacks):
                 self.websocket = websocket
                 self.on_open()
                 async for message in self.websocket:
-                    if message.tp == aiohttp.WSMsgType.text:
+                    if message.type == aiohttp.WSMsgType.text:
                         self.on_message(message.data)
-                    elif message.tp == aiohttp.WSMsgType.closed:
+                    elif message.type == aiohttp.WSMsgType.closed:
                         logger.warning("Websocket connection closed.")
                         self.on_close(*TransportErrors.connection_closed)
                         break
-                    elif message.tp == aiohttp.WSMsgType.error:
+                    elif message.type == aiohttp.WSMsgType.error:
                         logger.error("Websocket error")
                         self.on_close(*TransportErrors.connection_error)
                         break
