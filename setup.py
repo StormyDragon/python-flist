@@ -9,7 +9,7 @@ requirements = [
 ]
 
 setup(name='Python-flist',
-      version='0.1.2',
+      version='0.1.3',
       author='StormyDragon',
       author_email='stormy.pypi@stormweyr.dk',
       description='Python module for interacting with the f-list website.',
