@@ -42,6 +42,8 @@ class Account:
 
     async def refresh(self, password):
         data = await api.get_ticket(self.account, password)
+        if data.get('error'):
+            raise ConnectionRefusedError(data['error'])
         self.bookmarks = data['bookmarks']
         self.friends = data['friends']
         self._ticket = data['ticket']
