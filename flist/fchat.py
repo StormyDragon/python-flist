@@ -176,7 +176,7 @@ class ItemEnricher:
     def __init__(self, callable):
         self.callable = callable
 
-    def __call__(self, opcode, message):
+    def __call__(self, message):
         enriched_message = message.copy()
         self.callable(enriched_message)
 

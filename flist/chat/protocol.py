@@ -68,7 +68,7 @@ class FChatProtocol(object):
             except Exception:
                 callbacks.remove(f)
                 logger.exception("While processing callbacks another exception"
-                                 " occurred, callback function has been removed")
+                                 f" occurred, callback function has been removed {f}")
 
         for h in self.handlers:
             h(op, json)
