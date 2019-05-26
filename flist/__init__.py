@@ -11,7 +11,7 @@ def account_login(account, password):
     return account.login()
 
 
-def start_chat(character, url="wss://chat.f-list.net:9799"):
+def start_chat(character, url="wss://chat.f-list.net/chat2"):
     """Start an instance of fchat using the specified character.
     :param character: Character instance
     :param server: The server to which we connect.
